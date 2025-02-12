@@ -1,70 +1,8 @@
+use crate::map::{fetch_route, Coordinate, MapData};
 use chrono::NaiveDate;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Coordinate {
-    longitude: f64,
-    latitude: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SourceView {
-    #[serde(deserialize_with = "deserialize_location")]
-    pub location: Coordinate,
-    pub zoom: u8,
-}
-
-fn deserialize_location<'de, D>(deserializer: D) -> Result<Coordinate, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let coords: Vec<f64> = Vec::deserialize(deserializer)?;
-    if coords.len() != 2 {
-        return Err(serde::de::Error::custom(
-            "Location must be a sequence of two numbers",
-        ));
-    }
-    Ok(Coordinate {
-        longitude: coords[0],
-        latitude: coords[1],
-    })
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct MapDataSize {
-    width: String,
-    height: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MapData {
-    pub source_view: SourceView,
-    pub size: MapDataSize,
-    #[serde(deserialize_with = "deserialize_waypoints")]
-    pub waypoints: Vec<Coordinate>, // Use Vec<Coordinate>
-}
-
-fn deserialize_waypoints<'de, D>(deserializer: D) -> Result<Vec<Coordinate>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let coords: Vec<Vec<f64>> = Vec::deserialize(deserializer)?;
-    let mut waypoints = Vec::new();
-    for coord in coords {
-        if coord.len() != 2 {
-            return Err(serde::de::Error::custom(
-                "Each waypoint must be a sequence of two numbers",
-            ));
-        }
-        waypoints.push(Coordinate {
-            longitude: coord[0],
-            latitude: coord[1],
-        });
-    }
-    Ok(waypoints)
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Taxonomies {
@@ -145,16 +83,17 @@ impl Post {
     pub fn new(taxonomies: Taxonomies, content: String) -> Self {
         let external_link = None;
         let downloaded_link = None;
+        let route: Vec<Coordinate>;
 
-        let mut post = Post {
+        if let Some(map) = &taxonomies.map {
+            route = fetch_route(&map.waypoints).expect("Failed to fetch route!");
+        }
+        let post = Post {
             content: Content::new(taxonomies, content),
             external_link,
             downloaded_link,
         };
-
-        if let Some(map) = &mut post.content.taxonomies.map {
-            let route = fetch_route(&map.waypoints);
-        }
+        post.content.taxonomies.map.unwrap().route = Some(route);
 
         post
     }
@@ -181,9 +120,4 @@ impl Post {
     pub fn uuid(&self) -> String {
         Uuid::new_v5(&Uuid::NAMESPACE_OID, format!("{:?}", self).as_bytes()).to_string()
     }
-}
-
-fn fetch_route(waypoints: &[Coordinate]) -> String {
-    // Implement the logic to fetch the route based on waypoints
-    format!("Route for {} waypoints", waypoints.len())
 }

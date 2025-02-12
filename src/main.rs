@@ -1,4 +1,6 @@
 mod content;
+mod map;
+
 use content::{Post, Taxonomies};
 use pulldown_cmark::{html, Parser};
 use regex::Regex;
@@ -64,7 +66,6 @@ fn parse_content(input_file: &Path) -> Result<(Taxonomies, String), Box<dyn std:
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Example usage
     let input_file = Path::new("/Users/iilak/prg/internal/raw_blog/content/posts/create_map.md");
     let (taxonomies, html_output) = parse_content(input_file)?;
     let post = Post::new(taxonomies, html_output);

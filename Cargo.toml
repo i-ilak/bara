@@ -1,0 +1,14 @@
+[package]
+name = "bara"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version="0.4.39", features = ["serde"] }
+uuid = { version = "0.8", features = ["v5"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0.138"
+regex = "1.7"
+pulldown-cmark = "0.9"
+syntect = "4.6"

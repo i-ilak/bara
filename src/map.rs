@@ -4,8 +4,8 @@ use std::error::Error as StdError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Coordinate {
-    pub longitude: f64,
     pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct MapDataSize {
+pub struct MapDataSize {
     width: String,
     height: String,
 }
@@ -69,26 +69,18 @@ impl<'de> Deserialize<'de> for MapData {
                     ));
                 }
                 Ok(Coordinate {
-                    longitude: point[0],
-                    latitude: point[1],
+                    longitude: point[1],
+                    latitude: point[0],
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        // Fetch the route using the fetch_route function
-        let route = fetch_route(raw.waypoints.clone())
-            .map_err(|e| serde::de::Error::custom(e.to_string()))?
-            .into_iter()
-            .map(|point| Coordinate {
-                longitude: point[0],
-                latitude: point[1],
-            })
-            .collect();
+        let route = fetch_route(&waypoints).unwrap();
 
         Ok(MapData {
             source_view: raw.source_view,
             size: raw.size,
-            waypoints: raw.waypoints,
+            waypoints: waypoints,
             route: Some(route),
         })
     }
@@ -130,8 +122,8 @@ pub fn fetch_route(waypoints: &Vec<Coordinate>) -> Result<Vec<Coordinate>, Box<d
         let coordinates = route_geometry
             .iter()
             .map(|coord| {
-                let lon = coord[0].as_f64().ok_or("Invalid longitude")?;
-                let lat = coord[1].as_f64().ok_or("Invalid latitude")?;
+                let lon = coord[1].as_f64().ok_or("Invalid longitude")?;
+                let lat = coord[0].as_f64().ok_or("Invalid latitude")?;
                 Ok(Coordinate {
                     longitude: lon,
                     latitude: lat,

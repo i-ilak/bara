@@ -1,2 +1,7 @@
 /target
 .direnv/
+
+**/.DS_Store
+.vscode/
+
+output/

@@ -1,83 +1,64 @@
+mod archive;
+mod cli;
+mod config;
 mod content;
+mod css;
 mod map;
+mod projects;
+mod templates;
+mod util;
 
-use content::{Post, Taxonomies};
-use pulldown_cmark::{html, Parser};
-use regex::Regex;
+use archive::archive;
+use clap::Parser;
+use cli::Cli;
+use config::ConfigFile;
+use content::Post;
+use css::convert_scss_to_css;
 use serde_yaml;
 use std::fs;
-use std::path::Path;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, ThemeSet};
-use syntect::parsing::SyntaxSet;
-use syntect::util::as_24_bit_terminal_escaped;
-
-/// Converts Markdown content to HTML with syntax highlighting.
-fn markdown_to_html(markdown: &str) -> String {
-    // Create a Markdown parser
-    let parser = Parser::new(markdown);
-
-    // Convert Markdown to HTML
-    let mut html_output = String::new();
-    html::push_html(&mut html_output, parser);
-
-    // Optional: Add syntax highlighting using syntect
-    let syntax_set = SyntaxSet::load_defaults_newlines();
-    let theme_set = ThemeSet::load_defaults();
-    let syntax = syntax_set.find_syntax_by_extension("rs").unwrap(); // Example: Rust syntax
-    let mut h = HighlightLines::new(syntax, &theme_set.themes["base16-ocean.dark"]);
-
-    // Highlight code blocks (this is a simplified example)
-    for line in markdown.lines() {
-        if line.trim().starts_with("```") {
-            // Handle code blocks
-            let ranges: Vec<(Style, &str)> = h.highlight(line, &syntax_set);
-            let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
-            html_output.push_str(&escaped);
-        } else {
-            html_output.push_str(line);
-            html_output.push('\n');
-        }
-    }
-
-    html_output
-}
-
-/// Reads a Markdown file, extracts the YAML front matter, and converts the Markdown to HTML.
-fn parse_content(input_file: &Path) -> Result<(Taxonomies, String), Box<dyn std::error::Error>> {
-    let file_text = fs::read_to_string(input_file)?;
-
-    let re = Regex::new(r"---\s*")?;
-    let matches: Vec<&str> = re.split(&file_text.trim()).collect();
-
-    let (taxonomies, after) = if matches.len() > 1 {
-        let between = matches[1].trim();
-        let after = matches.get(2).map(|s| s.trim()).unwrap_or("");
-        let taxonomies: Taxonomies = serde_yaml::from_str(between)?;
-        (taxonomies, after)
-    } else {
-        panic!("Parsing content file did not work. There seems to be too many taxonomies sections.")
-    };
-
-    // Convert Markdown to HTML
-    let html_output = markdown_to_html(after);
-
-    Ok((taxonomies, html_output))
-}
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use tempfile::tempdir;
+use templates::process_jinja;
+use util::copy_dir_all;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let input_file = Path::new("/Users/iilak/prg/internal/raw_blog/content/posts/create_map.md");
-    let (taxonomies, html_output) = parse_content(input_file)?;
-    let post = Post::new(taxonomies, html_output);
+    let args = Cli::parse();
 
-    println!("{}", post.serialize());
+    // let working_dir = tempdir().expect("Was not able to create temporary directory.");
 
-    let input_file =
-        Path::new("/Users/iilak/prg/internal/raw_blog/content/posts/another_example.md");
-    let (taxonomies, html_output) = parse_content(input_file)?;
-    let post = Post::new(taxonomies, html_output);
+    let binding = String::from("/Users/iilak/prg/internal/bara/output/");
+    let working_dir: &Path = binding.as_ref();
 
-    println!("{:?}", post);
+    let config_file_string = fs::read_to_string("/Users/iilak/prg/internal/bara/bara.yml")
+        .expect("Could not find config file!");
+    let config: ConfigFile = serde_yaml::from_str(&config_file_string)
+        .expect("Could not parse config file! Are you sure its valid yaml?");
+
+    let output_dir = config.output.clone();
+    let root = config.root.clone();
+    let scss_source = config.scss_source.clone();
+
+    // process_jinja(config, working_dir.path().to_path_buf());
+    process_jinja(config, working_dir.to_path_buf());
+    convert_scss_to_css(scss_source, working_dir.to_path_buf());
+    let mut scirpts_dir = working_dir.clone().to_path_buf();
+    scirpts_dir.push("scripts");
+    let source = PathBuf::from(root.to_string() + "/scripts");
+    copy_dir_all(&source, &scirpts_dir);
+    Command::new("tsc")
+        .arg("--project")
+        .arg("/Users/iilak/prg/internal/raw_blog/tsconfig.json")
+        .arg("--outDir")
+        .arg(working_dir.clone().to_str() + "/scripts")
+        .output()?;
+
+    if args.archive {
+        // archive(working_dir.path()).expect("Could not create archive!");
+        archive(working_dir);
+    }
+
+    // copy_dir_all(working_dir.path(), output_dir.as_ref());
 
     Ok(())
 }

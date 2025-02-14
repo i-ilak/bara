@@ -140,8 +140,8 @@ fn parse_content(input_file: &Path) -> Result<(Taxonomies, String), Box<dyn std:
     Ok((taxonomies, html_output))
 }
 
-pub fn create_posts(config: ConfigFile, working_dir: PathBuf) -> Vec<Post> {
-    let entries: Vec<_> = fs::read_dir(config.content)
+pub fn create_posts(config: &ConfigFile, working_dir: &Path) -> Vec<Post> {
+    let entries: Vec<_> = fs::read_dir(config.content.clone())
         .expect("Cannot read directory!")
         .collect();
 
@@ -149,7 +149,11 @@ pub fn create_posts(config: ConfigFile, working_dir: PathBuf) -> Vec<Post> {
     for file in entries {
         let entry = file.expect("Error when looking at file!");
         let path = entry.path();
-        posts.push(Post::new(path, config.root.clone(), working_dir.clone()));
+        posts.push(Post::new(
+            path,
+            config.root.clone(),
+            working_dir.to_path_buf(),
+        ));
     }
     posts
 }

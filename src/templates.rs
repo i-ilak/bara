@@ -4,7 +4,7 @@ use crate::projects::create_projects;
 use crate::util::write_file;
 use minijinja::{context, Environment, Template};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 fn render_and_write<T>(
@@ -21,14 +21,14 @@ where
         .map_err(|e| format!("Could not render template: {}", e))?;
 
     if let Some(path) = output_path {
-        write_file(path, rendered.clone());
+        write_file(&path, rendered.clone());
     }
 
     Ok(rendered)
 }
 
-fn create_posts_and_projects(config: &ConfigFile, working_dir: PathBuf, env: &Environment) {
-    let posts = create_posts(config.clone(), working_dir.clone());
+fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Environment) {
+    let posts = create_posts(config, working_dir);
     let projects = create_projects(&config.projects);
 
     let card_post_template = env
@@ -74,10 +74,10 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: PathBuf, env: &En
     }
 
     // Write post overview
-    let mut posts_index_path = working_dir.clone();
+    let mut posts_index_path = working_dir.clone().to_path_buf();
     posts_index_path.push("posts/index.html");
     write_file(
-        posts_index_path,
+        &posts_index_path,
         post_overview_template
             .render(context! {
                 overview_title => "Posts",
@@ -87,10 +87,10 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: PathBuf, env: &En
     );
 
     // Write project overview
-    let mut projects_index_path = working_dir.clone();
+    let mut projects_index_path = working_dir.clone().to_path_buf();
     projects_index_path.push("projects/index.html");
     write_file(
-        projects_index_path,
+        &projects_index_path,
         post_overview_template
             .render(context! {
                 overview_title => "Projects",
@@ -122,15 +122,15 @@ fn load_templates(config: &ConfigFile, env: &mut Environment) {
     }
 }
 
-pub fn process_jinja(config: ConfigFile, working_dir: PathBuf) {
+pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     let mut env = Environment::new();
     load_templates(&config, &mut env);
-    create_posts_and_projects(&config, working_dir.clone(), &env);
+    create_posts_and_projects(&config, working_dir, &env);
 
-    let mut privacy_file_loc = working_dir.clone();
+    let mut privacy_file_loc = working_dir.clone().to_path_buf();
     privacy_file_loc.push("privacy_policy.html");
     write_file(
-        privacy_file_loc,
+        &privacy_file_loc,
         env.get_template("privacy_policy.jinja2")
             .expect("Cannot create privacy policy!")
             .render(context! {})

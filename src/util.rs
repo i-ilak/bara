@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-pub fn write_file(path: PathBuf, content: String) {
+pub fn write_file(path: &Path, content: String) {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).expect("Cloud not create directory to create file!");
     }

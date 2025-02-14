@@ -40,8 +40,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scss_source = config.scss_source.clone();
 
     // process_jinja(config, working_dir.path().to_path_buf());
-    process_jinja(config, working_dir.to_path_buf());
-    convert_scss_to_css(scss_source, working_dir.to_path_buf());
+    process_jinja(&config, working_dir);
+    convert_scss_to_css(&config, working_dir);
     let mut scirpts_dir = working_dir.clone().to_path_buf();
     scirpts_dir.push("scripts");
     let source = PathBuf::from(root.to_string() + "/scripts");
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .arg("--project")
         .arg("/Users/iilak/prg/internal/raw_blog/tsconfig.json")
         .arg("--outDir")
-        .arg(working_dir.clone().to_str() + "/scripts")
+        .arg(binding.clone() + "/scripts")
         .output()?;
 
     if args.archive {

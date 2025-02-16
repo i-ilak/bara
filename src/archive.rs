@@ -1,15 +1,15 @@
+use crate::config::ConfigFile;
+use crate::util::copy_dir_all;
 use semver::Version;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use walkdir::WalkDir;
 
-const TIME_MACHINE_DIR: &str = "time_machine";
-
-fn get_all_versions() -> Result<Vec<Version>, Box<dyn std::error::Error>> {
+fn get_all_versions(config: &ConfigFile) -> Result<Vec<Version>, Box<dyn std::error::Error>> {
     let mut versions = Vec::new();
 
     // Read the contents of the TIME_MACHINE_DIR
-    for entry in fs::read_dir(TIME_MACHINE_DIR)? {
+    for entry in fs::read_dir(config.time_machine.clone())? {
         let entry = entry?;
         let path = entry.path();
 
@@ -18,7 +18,7 @@ fn get_all_versions() -> Result<Vec<Version>, Box<dyn std::error::Error>> {
             if let Some(dir_name) = path.file_name() {
                 if let Some(dir_name_str) = dir_name.to_str() {
                     // Try to parse the directory name as a semantic version
-                    match Version::parse(dir_name_str) {
+                    match Version::parse(&dir_name_str[1..]) {
                         Ok(version) => versions.push(version),
                         Err(_) => {
                             // Skip directories with invalid version names
@@ -36,10 +36,14 @@ fn get_all_versions() -> Result<Vec<Version>, Box<dyn std::error::Error>> {
     Ok(versions)
 }
 
-fn copy_files_to_archive(working_dir: &Path, version: &str) -> std::io::Result<()> {
+fn copy_files_to_archive(
+    config: &ConfigFile,
+    working_dir: &Path,
+    version: &str,
+) -> std::io::Result<()> {
     // Create the destination directory
-    let dest_dir = PathBuf::from(TIME_MACHINE_DIR).join(version);
-    fs::create_dir_all(&dest_dir)?;
+    let dest_dir = config.time_machine.join(version);
+    fs::create_dir_all(&dest_dir).expect("Could not create new version folder!");
 
     // Folders to copy
     let folders = ["posts", "projects"];
@@ -48,39 +52,41 @@ fn copy_files_to_archive(working_dir: &Path, version: &str) -> std::io::Result<(
         let source_folder = working_dir.join(folder);
         let dest_folder = dest_dir.join(folder);
 
-        // Walk through the source folder
         for entry in WalkDir::new(&source_folder) {
             let entry = entry?;
+            if entry.file_type().is_file() {
+                continue;
+            }
             let path = entry.path();
 
-            // Calculate the relative path
-            let rel_path = path.strip_prefix(&source_folder).unwrap();
-            let target_path = dest_folder.join(rel_path);
-
-            if path.is_dir() {
-                // Create the target directory if it doesn't exist
-                fs::create_dir_all(&target_path)?;
-            } else if path.is_file() {
-                // Copy the file
-                fs::copy(path, &target_path)?;
-            }
+            copy_dir_all(path, &dest_folder);
         }
     }
+
+    copy_dir_all(
+        &config.root.join("_serve/scripts"),
+        &dest_dir.join("scripts"),
+    );
 
     // Copy individual files
     let files = ["index.html", "index.css", "rss.xml", "privacy_policy.html"];
     for file in files.iter() {
         let source_file = working_dir.join(file);
         let dest_file = dest_dir.join(file);
-        fs::copy(&source_file, &dest_file)?;
+        match fs::copy(&source_file, &dest_file) {
+            Ok(_) => {}
+            Err(_) => {
+                println!("{}", format!("File does not exist:\t{:?}", file))
+            }
+        };
     }
 
     Ok(())
 }
 
-pub fn archive(working_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn archive(config: &ConfigFile, working_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Get all existing versions
-    let versions = get_all_versions()?;
+    let versions = get_all_versions(config).expect("Could not extract all the versions!");
 
     // Check if there are any existing versions
     if versions.is_empty() {
@@ -103,7 +109,7 @@ pub fn archive(working_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let version = format!("v{}", new_version);
 
     // Copy files to the archive with the new version
-    copy_files_to_archive(working_dir, &version)?;
+    copy_files_to_archive(config, working_dir, &version)?;
 
     Ok(())
 }

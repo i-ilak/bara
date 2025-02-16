@@ -4,7 +4,6 @@ use crate::projects::create_projects;
 use crate::util::write_file;
 use minijinja::{context, Environment, Template};
 use serde_json::{json, Value};
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use versions::Version;
@@ -99,7 +98,7 @@ fn create_database(posts: &Vec<Post>, working_dir: &Path, config: &ConfigFile) {
 }
 
 fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Environment) {
-    let posts = create_posts(config, working_dir);
+    let posts = create_posts(config);
     let projects = create_projects(&config.projects);
 
     let card_post_template = env
@@ -123,8 +122,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
 
     // Process posts
     for post in posts.iter() {
-        let mut file_path = working_dir.clone().to_path_buf();
-        file_path.push(post.serve_file_path.clone().unwrap());
+        let file_path = working_dir.join(post.serve_file_path.clone().unwrap());
         let card_html = render_and_write(
             &card_post_template,
             post,
@@ -157,8 +155,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     }
 
     // Write post overview
-    let mut posts_index_path = working_dir.to_path_buf();
-    posts_index_path.push("posts/index.html");
+    let posts_index_path = working_dir.join("posts/index.html");
     write_file(
         &posts_index_path,
         post_and_project_overview_template
@@ -170,8 +167,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     );
 
     // Write project overview
-    let mut projects_index_path = working_dir.to_path_buf();
-    projects_index_path.push("projects/index.html");
+    let projects_index_path = working_dir.join("projects/index.html");
     write_file(
         &projects_index_path,
         post_and_project_overview_template
@@ -210,11 +206,8 @@ pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     load_templates(&config, &mut env);
     create_posts_and_projects(&config, working_dir, &env);
 
-    let mut landing_page_loc = working_dir.to_path_buf();
-    landing_page_loc.push("index.html");
-    let mut landing_page_markdown = PathBuf::from(config.root.clone());
-    landing_page_markdown.push("content");
-    landing_page_markdown.push("landing.md");
+    let landing_page_loc = working_dir.join("index.html");
+    let landing_page_markdown = config.root.join("content").join("landing.md");
     let content = markdown_to_html(&fs::read_to_string(landing_page_markdown).unwrap());
     write_file(
         &landing_page_loc,
@@ -227,8 +220,7 @@ pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
             .unwrap(),
     );
 
-    let mut privacy_file_loc = working_dir.to_path_buf();
-    privacy_file_loc.push("privacy_policy.html");
+    let privacy_file_loc = working_dir.join("privacy_policy.html");
     write_file(
         &privacy_file_loc,
         env.get_template("privacy_policy.jinja2")

@@ -1,6 +1,7 @@
 use minijinja::context;
 use serde::Deserialize;
 use std::fs;
+use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 pub struct Project {
@@ -24,7 +25,7 @@ pub struct Projects {
     pub projects: Vec<Project>,
 }
 
-pub fn create_projects(projects_path: &String) -> Vec<Project> {
+pub fn create_projects(projects_path: &Path) -> Vec<Project> {
     let projects_str = fs::read_to_string(&projects_path).expect("Could not read file!");
     let projects: Projects =
         serde_yaml::from_str(&projects_str).expect("Error parsing projects.yml!");

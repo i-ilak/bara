@@ -1,14 +1,14 @@
 use serde::Deserialize;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ConfigFile {
-    pub root: String,
-    pub output: String,
-    pub content: String,
-    pub templates: String,
-    pub projects: String,
-    pub scss_source: String,
-    pub scripts: String,
-    pub static_dir: String,
-    pub time_machine: String,
+    pub root: PathBuf,
+    pub output: PathBuf,
+    pub content: PathBuf,
+    pub templates: PathBuf,
+    pub projects: PathBuf,
+    pub scss_source: PathBuf,
+    pub static_dir: PathBuf,
+    pub time_machine: PathBuf,
 }

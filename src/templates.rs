@@ -1,10 +1,13 @@
 use crate::config::ConfigFile;
-use crate::content::create_posts;
+use crate::content::{create_posts, markdown_to_html, Post};
 use crate::projects::create_projects;
 use crate::util::write_file;
 use minijinja::{context, Environment, Template};
+use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use versions::Version;
 use walkdir::WalkDir;
 
 fn render_and_write<T>(
@@ -27,6 +30,74 @@ where
     Ok(rendered)
 }
 
+fn get_all_versions(time_machine_dir: &Path) -> Vec<Version> {
+    let mut versions = Vec::new();
+
+    if let Ok(entries) = fs::read_dir(time_machine_dir) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(dir_name) = path.file_name() {
+                        if let Some(dir_name_str) = dir_name.to_str() {
+                            versions.push(Version::new(dir_name_str).unwrap());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    versions.sort();
+    versions
+}
+
+fn create_database(posts: &Vec<Post>, working_dir: &Path, config: &ConfigFile) {
+    let mut database = json!({
+        "posts": {},
+        "tags": {},
+    });
+
+    for post in posts {
+        if post.taxonomies.tags.is_empty() {
+            continue;
+        }
+
+        let post_entry = json!({
+            "metadata": post.serialize(),
+            "html": "<div>Fix the code in bara, you were too lazy to fix...</div>",
+        });
+
+        database["posts"][post.uuid()] = post_entry;
+
+        for tag in &post.taxonomies.tags {
+            if !database["tags"].get(tag).is_some() {
+                database["tags"][tag] = json!([]);
+            }
+            database["tags"][tag]
+                .as_array_mut()
+                .unwrap()
+                .push(json!(post.uuid()));
+        }
+    }
+
+    // Add versions to the database
+    let versions: Vec<Value> = get_all_versions(&PathBuf::from(config.time_machine.clone()))
+        .iter()
+        .rev()
+        .map(|v| json!(format!("{}", v)))
+        .collect();
+    database["versions"] = json!(versions);
+
+    // Write the database to a file
+    let mut database_filepath = working_dir.to_path_buf();
+    database_filepath.push("database.json");
+    write_file(
+        &database_filepath,
+        serde_json::to_string_pretty(&database).unwrap(),
+    );
+}
+
 fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Environment) {
     let posts = create_posts(config, working_dir);
     let projects = create_projects(&config.projects);
@@ -34,7 +105,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     let card_post_template = env
         .get_template("cards/post.jinja2")
         .expect("Template does not exist!");
-    
+
     let card_project_template = env
         .get_template("cards/project.jinja2")
         .expect("Template does not exist!");
@@ -71,6 +142,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
         )
         .unwrap();
     }
+    create_database(&posts, &working_dir, config);
 
     // Process projects
     for project in projects.iter() {
@@ -106,7 +178,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
             .render(context! {
                 overview_title => "Projects",
                 posts => cards_projects_html,
-                project => "",
+                project => true,
             })
             .unwrap(),
     );
@@ -137,6 +209,23 @@ pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     let mut env = Environment::new();
     load_templates(&config, &mut env);
     create_posts_and_projects(&config, working_dir, &env);
+
+    let mut landing_page_loc = working_dir.to_path_buf();
+    landing_page_loc.push("index.html");
+    let mut landing_page_markdown = PathBuf::from(config.root.clone());
+    landing_page_markdown.push("content");
+    landing_page_markdown.push("landing.md");
+    let content = markdown_to_html(&fs::read_to_string(landing_page_markdown).unwrap());
+    write_file(
+        &landing_page_loc,
+        env.get_template("landing.jinja2")
+            .expect("Cannot get landing page template!")
+            .render(context! {
+                markdown => content,
+                home => true
+            })
+            .unwrap(),
+    );
 
     let mut privacy_file_loc = working_dir.to_path_buf();
     privacy_file_loc.push("privacy_policy.html");

@@ -99,7 +99,7 @@ impl Post {
 }
 
 /// Converts Markdown content to HTML with syntax highlighting.
-fn markdown_to_html(markdown: &str) -> String {
+pub fn markdown_to_html(markdown: &str) -> String {
     // Create a Markdown parser
     let parser = Parser::new(markdown);
 
@@ -111,7 +111,9 @@ fn markdown_to_html(markdown: &str) -> String {
 }
 
 /// Reads a Markdown file, extracts the YAML front matter, and converts the Markdown to HTML.
-fn parse_content(input_file: &Path) -> Result<(Taxonomies, String), Box<dyn std::error::Error>> {
+pub fn parse_content(
+    input_file: &Path,
+) -> Result<(Taxonomies, String), Box<dyn std::error::Error>> {
     let file_text = fs::read_to_string(input_file)?;
 
     let re = Regex::new(r"---\s*")?;

@@ -10,4 +10,5 @@ pub struct ConfigFile {
     pub scss_source: String,
     pub scripts: String,
     pub static_dir: String,
+    pub time_machine: String,
 }

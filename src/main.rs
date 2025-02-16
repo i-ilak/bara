@@ -5,7 +5,6 @@ mod content;
 mod css;
 mod map;
 mod projects;
-mod swc;
 mod templates;
 mod util;
 
@@ -16,8 +15,7 @@ use config::ConfigFile;
 use css::convert_scss_to_css;
 use serde_yaml;
 use std::fs;
-use std::path::{Path, PathBuf};
-use swc::compile_folder;
+use std::path::PathBuf;
 use temp_dir::TempDir;
 use templates::process_jinja;
 use util::{copy_dir_all, patch_basepath};
@@ -27,8 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let working_dir = TempDir::new().expect("Was not able to create temporary directory.");
 
-    let config_file_string = fs::read_to_string("/Users/iilak/prg/internal/bara/bara.yml")
-        .expect("Could not find config file!");
+    let config_file_string = fs::read_to_string(args.config).expect("Could not find config file!");
     let config: ConfigFile = serde_yaml::from_str(&config_file_string)
         .expect("Could not parse config file! Are you sure its valid yaml?");
 
@@ -38,19 +35,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     static_dir.push("static");
     copy_dir_all(&PathBuf::from(config.static_dir), &static_dir);
 
-    let mut scripts_dir = working_dir.path().to_path_buf();
-    scripts_dir.push("scripts");
-    compile_folder(&PathBuf::from(config.scripts), &scripts_dir);
-
     if args.archive {
         archive(working_dir.path());
+        return Ok(());
     }
 
-    let binding = String::from("/Users/iilak/prg/internal/bara/output/");
-    let output_dir: &Path = binding.as_ref();
+    let mut time_machine_dir = working_dir.path().to_path_buf();
+    time_machine_dir.push("time_machine");
+    copy_dir_all(&PathBuf::from(config.time_machine), &time_machine_dir).unwrap();
+
+    let output_dir = PathBuf::from(config.output);
 
     patch_basepath(working_dir.path());
-    copy_dir_all(working_dir.path(), output_dir).unwrap();
+    copy_dir_all(working_dir.path(), &output_dir).unwrap();
 
     Ok(())
 }

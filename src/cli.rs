@@ -10,4 +10,6 @@ use clap::Parser;
 pub struct Cli {
     #[clap(short, long)]
     pub archive: bool,
+    #[clap(short, long)]
+    pub config: String,
 }

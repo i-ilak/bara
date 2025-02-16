@@ -92,7 +92,7 @@ pub fn patch_basepath(working_dir: &Path) {
                         replace_in_file(current_path, "BASEPATH", "");
                     } else if let Some(captures) = re.captures(&parent_dir_str) {
                         let match_str = captures.get(0).unwrap().as_str();
-                        replace_in_file(current_path, "BASEPATH", match_str);
+                        replace_in_file(current_path, "BASEPATH", &format!("/{}", match_str));
                     }
                 }
             }

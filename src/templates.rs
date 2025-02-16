@@ -11,7 +11,7 @@ fn render_and_write<T>(
     template: &Template,
     item: &T,
     context_fn: impl Fn(&T) -> minijinja::Value,
-    output_path: Option<PathBuf>,
+    output_path: Option<&Path>,
 ) -> Result<String, Box<dyn std::error::Error>>
 where
     T: ?Sized,
@@ -34,12 +34,16 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     let card_post_template = env
         .get_template("cards/post.jinja2")
         .expect("Template does not exist!");
+    
+    let card_project_template = env
+        .get_template("cards/project.jinja2")
+        .expect("Template does not exist!");
 
     let post_template = env
         .get_template("post.jinja2")
         .expect("Template does not exist!");
 
-    let post_overview_template = env
+    let post_and_project_overview_template = env
         .get_template("post_overview.jinja2")
         .expect("Could not load template: post_overview.jinja2");
 
@@ -48,15 +52,22 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
 
     // Process posts
     for post in posts.iter() {
-        let card_html =
-            render_and_write(&card_post_template, post, |p| p.card_jinja_context(), None).unwrap();
+        let mut file_path = working_dir.clone().to_path_buf();
+        file_path.push(post.serve_file_path.clone().unwrap());
+        let card_html = render_and_write(
+            &card_post_template,
+            post,
+            |p| p.card_jinja_context(),
+            Some(&file_path),
+        )
+        .unwrap();
         cards_posts_html.push(card_html);
 
         render_and_write(
             &post_template,
             post,
             |p| p.jinja_context(),
-            post.serve_file_path.clone(),
+            Some(&file_path),
         )
         .unwrap();
     }
@@ -64,7 +75,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     // Process projects
     for project in projects.iter() {
         let card_html = render_and_write(
-            &card_post_template,
+            &card_project_template,
             project,
             |p| p.card_jinja_context(),
             None,
@@ -74,11 +85,11 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     }
 
     // Write post overview
-    let mut posts_index_path = working_dir.clone().to_path_buf();
+    let mut posts_index_path = working_dir.to_path_buf();
     posts_index_path.push("posts/index.html");
     write_file(
         &posts_index_path,
-        post_overview_template
+        post_and_project_overview_template
             .render(context! {
                 overview_title => "Posts",
                 posts => cards_posts_html,
@@ -87,11 +98,11 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     );
 
     // Write project overview
-    let mut projects_index_path = working_dir.clone().to_path_buf();
+    let mut projects_index_path = working_dir.to_path_buf();
     projects_index_path.push("projects/index.html");
     write_file(
         &projects_index_path,
-        post_overview_template
+        post_and_project_overview_template
             .render(context! {
                 overview_title => "Projects",
                 posts => cards_projects_html,
@@ -127,7 +138,7 @@ pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     load_templates(&config, &mut env);
     create_posts_and_projects(&config, working_dir, &env);
 
-    let mut privacy_file_loc = working_dir.clone().to_path_buf();
+    let mut privacy_file_loc = working_dir.to_path_buf();
     privacy_file_loc.push("privacy_policy.html");
     write_file(
         &privacy_file_loc,

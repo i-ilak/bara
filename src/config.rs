@@ -8,4 +8,6 @@ pub struct ConfigFile {
     pub templates: String,
     pub projects: String,
     pub scss_source: String,
+    pub scripts: String,
+    pub static_dir: String,
 }

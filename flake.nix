@@ -46,6 +46,7 @@
             cargo-watch
             rust-analyzer
             just
+            python3
           ];
 
           env = {

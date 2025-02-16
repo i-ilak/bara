@@ -9,7 +9,7 @@ pub fn convert_scss_to_css(config: &ConfigFile, destination: &Path) {
         .expect("Failed to read SCSS file");
     let options = Options::default().load_path(config.scss_source.clone());
     let css_output = grass::from_string(scss_content, &options).expect("Failed to compile SCSS");
-    let mut css_file = destination.clone().to_path_buf();
+    let mut css_file = destination.to_path_buf();
     css_file.push("index.css");
     write_file(&css_file, css_output)
 }

@@ -12,9 +12,9 @@ pub struct Project {
 impl Project {
     pub fn card_jinja_context(&self) -> minijinja::Value {
         context! {
-            post_description => self.description,
-            post_link => self.link,
-            post_title => self.title,
+            project_description => self.description,
+            project_link => self.link,
+            project_title => self.title,
         }
     }
 }

@@ -3,6 +3,10 @@ name = "bara"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+strip = true
+lto = true
+
 [dependencies]
 chrono = { version="0.4.39", features = ["serde"] }
 uuid = { version = "0.8", features = ["v5"] }
@@ -16,6 +20,12 @@ reqwest = { version = "0.11", features = ["json", "blocking"] }
 walkdir = "2.5.0"
 semver = "1.0"
 clap = { version = "4.0", features = ["derive"] }
-tempfile = "3"
 minijinja = { version="2.7.0", features=["loader"] }
 grass = "0.13.4"
+temp-dir = "0.1.14"
+swc_common = "6.1.1"
+swc_ecma_parser = "8.0.2"
+swc_ecma_transforms = {version="11.0.0", features = ["typescript"] }
+swc_ecma_codegen = "6.1.0"
+swc_ecma_ast = "6.1.0"
+swc_ecma_visit = "6.0.0"

@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use pulldown_cmark::{html, Parser};
@@ -11,10 +12,6 @@ use regex::Regex;
 use serde_yaml;
 use std::fs;
 use std::path::Path;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, ThemeSet};
-use syntect::parsing::SyntaxSet;
-use syntect::util::as_24_bit_terminal_escaped;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Taxonomies {
@@ -43,11 +40,7 @@ impl Post {
         let source_file_path = Some(path.clone());
         let mut file_path = path.to_string_lossy().replace("/content", "");
         file_path = file_path.replace(".md", ".html").replace(&root, "");
-
-        let mut serve_path = working_dir.clone();
-        serve_path.push(file_path);
-
-        let serve_file_path = Some(serve_path);
+        let serve_file_path = Some(PathBuf::from_str(&file_path).unwrap());
 
         let post = Post {
             taxonomies,
@@ -67,8 +60,7 @@ impl Post {
         });
 
         if let Some(serve_file_path) = &self.serve_file_path {
-            result["serve_file_path"] =
-                serde_json::json!(format!("BASEPATH/{}", serve_file_path.display()));
+            result["serve_file_path"] = serde_json::json!(serve_file_path);
         }
 
         if !self.taxonomies.tags.is_empty() {

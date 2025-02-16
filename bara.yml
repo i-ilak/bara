@@ -4,3 +4,5 @@ content: /Users/iilak/prg/internal/raw_blog/content/posts
 templates: /Users/iilak/prg/internal/raw_blog/templates/
 projects: /Users/iilak/prg/internal/raw_blog/content/projects/projects.yml
 scss_source: /Users/iilak/prg/internal/raw_blog/scss
+scripts: /Users/iilak/prg/internal/raw_blog/scripts
+static_dir: /Users/iilak/prg/internal/raw_blog/static

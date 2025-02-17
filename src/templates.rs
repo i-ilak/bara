@@ -2,12 +2,81 @@ use crate::config::ConfigFile;
 use crate::content::{create_posts, markdown_to_html, Post};
 use crate::projects::create_projects;
 use crate::util::write_file;
+use chrono::TimeZone;
+use chrono::{NaiveDateTime, NaiveTime};
+use chrono_tz::Tz;
 use minijinja::{context, Environment, Template};
+use serde::Serialize;
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use versions::Version;
 use walkdir::WalkDir;
+
+#[derive(Serialize)]
+struct RssItem {
+    title: String,
+    link: String,
+    description: String,
+    pub_date: String,
+    tags: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct TemplateContext {
+    site_title: String,
+    site_url: String,
+    site_description: String,
+    items: Vec<RssItem>,
+}
+
+fn generate_rss(env: &Environment, posts: &[Post], working_dir: &Path) {
+    let gmt = "GMT".parse::<Tz>().unwrap();
+    let mut items = Vec::with_capacity(posts.len());
+
+    for post in posts {
+        let naive_datetime = NaiveDateTime::new(
+            post.taxonomies.date,
+            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+        );
+        let pub_date = gmt.from_utc_datetime(&naive_datetime).to_rfc2822();
+
+        // Get relative URL path
+        let link = post
+            .serve_file_path
+            .as_ref()
+            .and_then(|p| p.to_str())
+            .unwrap_or("")
+            .trim_start_matches("/");
+
+        items.push(RssItem {
+            title: post.taxonomies.title.clone(),
+            link: format!("BASEPATH/{}", link.to_string()),
+            description: post.taxonomies.description.clone(),
+            pub_date,
+            tags: post.taxonomies.tags.clone(),
+        });
+    }
+
+    // Create template context
+    let ctx = TemplateContext {
+        site_title: String::from("ilak.ch"),
+        site_url: String::from("https://www.ilak.ch"),
+        site_description: String::from("Personal blog"),
+        items,
+    };
+
+    // Render template
+    let output = env
+        .get_template("rss_feed.jinja2")
+        .unwrap()
+        .render(ctx)
+        .unwrap();
+
+    // Write to file
+    let rss_path = working_dir.join("rss.xml");
+    std::fs::write(rss_path, output).unwrap();
+}
 
 fn render_and_write<T>(
     template: &Template,
@@ -178,6 +247,8 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
             })
             .unwrap(),
     );
+
+    generate_rss(env, &posts, working_dir);
 }
 
 fn load_templates(config: &ConfigFile, env: &mut Environment) {

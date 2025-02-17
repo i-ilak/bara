@@ -1,6 +1,5 @@
 use crate::config::ConfigFile;
 use crate::map::MapData;
-use chrono::NaiveDate;
 use minijinja::context;
 use pulldown_cmark::{html, CodeBlockKind, Event, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
@@ -10,10 +9,12 @@ use syntect::parsing::SyntaxSet;
 use two_face::re_exports::syntect;
 use uuid::Uuid;
 
+use chrono::NaiveDate;
+use std::path::Path;
+
 use regex::Regex;
 use serde_yaml;
 use std::fs;
-use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Taxonomies {
@@ -104,7 +105,7 @@ pub fn markdown_to_html(markdown: &str) -> String {
     // Load syntax set and theme for syntax highlighting
     let syntax_set = SyntaxSet::load_defaults_newlines();
     let theme_set = two_face::theme::extra();
-    let theme = theme_set.get(two_face::theme::EmbeddedThemeName::Nord);
+    let theme = theme_set.get(two_face::theme::EmbeddedThemeName::InspiredGithub);
 
     let mut html_output = String::new();
     let mut in_code_block = false;
@@ -147,7 +148,7 @@ pub fn markdown_to_html(markdown: &str) -> String {
                             if i == 0 || i == lines.len() - 1 {
                                 line.to_string()
                             } else {
-                                format!("<span class=\"line-number\">{}</span>{}", i, line)
+                                format!("<span class=\"line-number\">{:<3}</span>{}", i, line)
                             }
                         })
                         .collect::<Vec<String>>()

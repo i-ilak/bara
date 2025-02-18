@@ -2,12 +2,13 @@ use crate::config::ConfigFile;
 use crate::content::{create_posts, markdown_to_html, Post};
 use crate::projects::create_projects;
 use crate::util::write_file;
-use chrono::TimeZone;
-use chrono::{NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use chrono_tz::Tz;
 use minijinja::{context, Environment, Template};
+use serde::Deserialize;
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use versions::Version;
@@ -166,12 +167,60 @@ fn create_database(posts: &Vec<Post>, working_dir: &Path, config: &ConfigFile) {
     );
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Links {
+    pub title: String,
+    pub description: String,
+    pub author: String,
+    pub date: NaiveDate,
+    pub external_link: String,
+    pub downloaded_link: String,
+}
+
+impl Links {
+    pub fn card_jinja_context(&self) -> minijinja::Value {
+        context! {
+            description => self.description,
+            title => self.title,
+            date => self.date,
+            author => self.author,
+            external_link => self.external_link,
+            downloaded_link => self.external_link,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LinkFile {
+    pub links: Vec<Links>,
+}
+
+pub fn create_links(config: &ConfigFile) -> Vec<Links> {
+    let mut link_file = config
+        .content
+        .parent()
+        .expect("Parent does not exist!")
+        .join("links");
+    link_file = link_file.join("links.yml");
+
+    let file_content = fs::read_to_string(link_file).unwrap();
+
+    let links: LinkFile = serde_yaml::from_str(&file_content)
+        .expect("Deserializing links-yaml file was not possible!");
+    links.links
+}
+
 fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Environment) {
     let posts = create_posts(config);
+    let links = create_links(config);
     let projects = create_projects(&config.projects);
 
     let card_post_template = env
         .get_template("cards/post.jinja2")
+        .expect("Template does not exist!");
+
+    let card_links_template = env
+        .get_template("cards/link.jinja2")
         .expect("Template does not exist!");
 
     let card_project_template = env
@@ -223,6 +272,13 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
         cards_projects_html.push(card_html);
     }
 
+    // Process links
+    for link in links.iter() {
+        let card_html =
+            render_and_write(&card_links_template, link, |p| p.card_jinja_context(), None).unwrap();
+        cards_posts_html.push(card_html);
+    }
+
     // Write post overview
     let posts_index_path = working_dir.join("posts/index.html");
     write_file(
@@ -251,7 +307,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     generate_rss(env, &posts, working_dir);
 }
 
-fn load_templates(config: &ConfigFile, env: &mut Environment) {
+pub fn load_templates(config: &ConfigFile, env: &mut Environment) {
     for entry in WalkDir::new(config.templates.clone())
         .into_iter()
         .filter_map(|e| e.ok())
@@ -272,7 +328,7 @@ fn load_templates(config: &ConfigFile, env: &mut Environment) {
     }
 }
 
-pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
+pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     let mut env = Environment::new();
     load_templates(&config, &mut env);
     create_posts_and_projects(&config, working_dir, &env);

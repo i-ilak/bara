@@ -2,13 +2,13 @@ use reqwest;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::error::Error as StdError;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Coordinate {
     pub latitude: f64,
     pub longitude: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SourceView {
     #[serde(deserialize_with = "deserialize_location")]
     pub location: Coordinate,

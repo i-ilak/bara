@@ -3,6 +3,7 @@ mod cli;
 mod config;
 mod content;
 mod css;
+mod links;
 mod map;
 mod projects;
 mod templates;
@@ -13,6 +14,7 @@ use clap::Parser;
 use cli::Cli;
 use config::ConfigFile;
 use css::convert_scss_to_css;
+use futures::join;
 use serde_yaml;
 use std::fs;
 use std::path::PathBuf;
@@ -30,8 +32,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .expect("Could not parse config file! Are you sure its valid yaml?");
 
-    process_jinja(&config, working_dir.path());
-    convert_scss_to_css(&config, working_dir.path());
+    futures::executor::block_on(async {
+        let jinja_handle = process_jinja(&config, working_dir.path());
+        let scss_handle = convert_scss_to_css(&config, working_dir.path());
+
+        join!(jinja_handle, scss_handle);
+    });
     copy_dir_all(&config.static_dir, &working_dir.path().join("static"));
 
     if args.archive {

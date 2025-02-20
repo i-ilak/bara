@@ -8,7 +8,7 @@ use minijinja::{context, Environment, Template};
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use versions::Version;
@@ -172,7 +172,8 @@ pub struct Links {
     pub title: String,
     pub description: String,
     pub author: String,
-    pub date: NaiveDate,
+    pub date_published: NaiveDate,
+    pub date_linked: NaiveDate,
     pub external_link: String,
     pub downloaded_link: String,
 }
@@ -182,10 +183,11 @@ impl Links {
         context! {
             description => self.description,
             title => self.title,
-            date => self.date,
+            date_published => self.date_published,
+            date_linked => self.date_linked,
             author => self.author,
             external_link => self.external_link,
-            downloaded_link => self.external_link,
+            downloaded_link => self.downloaded_link,
         }
     }
 }
@@ -235,8 +237,8 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
         .get_template("post_overview.jinja2")
         .expect("Could not load template: post_overview.jinja2");
 
-    let mut cards_posts_html = Vec::with_capacity(posts.len());
-    let mut cards_projects_html = Vec::with_capacity(projects.len());
+    let mut cards_posts_html: BTreeMap<&NaiveDate, String> = Default::default();
+    let mut cards_projects_html: Vec<String> = Vec::with_capacity(projects.len());
 
     // Process posts
     for post in posts.iter() {
@@ -248,7 +250,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
             Some(&file_path),
         )
         .unwrap();
-        cards_posts_html.push(card_html);
+        cards_posts_html.insert(&post.taxonomies.date, card_html);
 
         render_and_write(
             &post_template,
@@ -276,17 +278,29 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     for link in links.iter() {
         let card_html =
             render_and_write(&card_links_template, link, |p| p.card_jinja_context(), None).unwrap();
-        cards_posts_html.push(card_html);
+        let link_folder = config.root.join("content");
+
+        if !working_dir.join("links").exists() {
+            fs::create_dir(working_dir.join("links")).unwrap();
+        }
+        fs::copy(
+            link_folder.join(&link.downloaded_link[1..]),
+            working_dir.join(&link.downloaded_link[1..]),
+        )
+        .unwrap();
+        cards_posts_html.insert(&link.date_linked, card_html);
     }
 
     // Write post overview
     let posts_index_path = working_dir.join("posts/index.html");
+    let mut ordered_cards = cards_posts_html.into_values().collect::<Vec<_>>();
+    ordered_cards.reverse();
     write_file(
         &posts_index_path,
         post_and_project_overview_template
             .render(context! {
                 overview_title => "Posts",
-                posts => cards_posts_html,
+                posts => ordered_cards,
             })
             .unwrap(),
     );

@@ -1,8 +1,10 @@
 use crate::config::ConfigFile;
 use crate::map::MapData;
 use minijinja::context;
+use minijinja::Value;
 use pulldown_cmark::{html, CodeBlockKind, Event, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
@@ -17,13 +19,21 @@ use serde_yaml;
 use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ExternInfo {
+    pub author: String,
+    pub date: NaiveDate,
+    pub link: String,
+    pub title: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Taxonomies {
     pub title: String,
     pub description: String,
     pub date: NaiveDate,
     pub map: Option<MapData>,
     pub tags: Vec<String>,
-    pub external_link: Option<String>,
+    pub extern_info: Option<ExternInfo>,
     pub downloaded_link: Option<String>,
 }
 
@@ -71,25 +81,67 @@ impl Post {
     }
 
     pub fn card_jinja_context(&self) -> minijinja::Value {
-        context! {
-            post_description => self.taxonomies.description,
-            post_link => self.serve_file_path,
-            post_title => self.taxonomies.title,
-            post_date => self.taxonomies.date,
-            external_link => self.taxonomies.external_link,
+        let external = &self.taxonomies.extern_info;
+        match external {
+            None => {
+                context! {
+                    post_description => self.taxonomies.description,
+                    post_link => self.serve_file_path,
+                    post_title => self.taxonomies.title,
+                    post_date => self.taxonomies.date,
+                }
+            }
+            Some(value) => {
+                context! {
+                    post_description => self.taxonomies.description,
+                    post_link => self.serve_file_path,
+                    post_title => self.taxonomies.title,
+                    post_date => self.taxonomies.date,
+                    extern_link => value.link
+                }
+            }
         }
     }
 
     pub fn jinja_context(&self) -> minijinja::Value {
+        let extern_info = &self.taxonomies.extern_info;
+        let map = &self.taxonomies.map;
+
+        // Start with a HashMap to build the context
+        let mut context_data = HashMap::new();
+
+        // Add common fields
+        context_data.insert("content", Value::from(self.post_html.clone()));
+        context_data.insert(
+            "page_name",
+            Value::from(
+                self.source_file_path
+                    .clone()
+                    .unwrap()
+                    .file_stem()
+                    .and_then(|os_str| os_str.to_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| String::from(""))
+                    + ".md",
+            ),
+        );
+        context_data.insert("title", Value::from(self.taxonomies.title.clone()));
+
+        // Add extern_info fields if present
+        if let Some(value) = extern_info {
+            context_data.insert("extern_link", Value::from(value.link.clone()));
+            context_data.insert("extern_author", Value::from(value.author.clone()));
+            context_data.insert("extern_date", Value::from(value.date.clone().to_string()));
+            context_data.insert("extern_title", Value::from(value.title.clone()));
+        }
+
+        // Add map fields if present
+        if let Some(map_data) = map {
+            context_data.insert("map", Value::from_serialize(map_data));
+        }
+
         context! {
-           content => self.post_html,
-           page_name => self.source_file_path
-                .clone()
-                .unwrap()
-                .file_stem()
-                .and_then(|os_str| os_str.to_str())
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| String::from("")) + ".md",
+            ..context_data
         }
     }
 

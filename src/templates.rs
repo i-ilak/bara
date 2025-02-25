@@ -1,5 +1,6 @@
 use crate::config::ConfigFile;
-use crate::content::{create_posts, markdown_to_html, Post};
+use crate::content::{create_posts, Post};
+use crate::markdown_parsing::markdown_to_html;
 use crate::projects::create_projects;
 use crate::util::write_file;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone};

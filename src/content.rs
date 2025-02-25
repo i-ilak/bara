@@ -2,15 +2,11 @@ use crate::config::ConfigFile;
 use crate::map::MapData;
 use minijinja::context;
 use minijinja::Value;
-use pulldown_cmark::{html, CodeBlockKind, Event, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use syntect::html::highlighted_html_for_string;
-use syntect::parsing::SyntaxSet;
-use two_face::re_exports::syntect;
+use crate::markdown_parsing::markdown_to_html;
 use uuid::Uuid;
-
 use chrono::NaiveDate;
 use std::path::Path;
 
@@ -148,77 +144,6 @@ impl Post {
     pub fn uuid(&self) -> String {
         Uuid::new_v5(&Uuid::NAMESPACE_OID, format!("{:?}", self).as_bytes()).to_string()
     }
-}
-
-/// Converts Markdown content to HTML with syntax highlighting.
-pub fn markdown_to_html(markdown: &str) -> String {
-    let parser = Parser::new(markdown);
-
-    // Load syntax set and theme for syntax highlighting
-    let syntax_set = SyntaxSet::load_defaults_newlines();
-    let theme_set = two_face::theme::extra();
-    let theme = theme_set.get(two_face::theme::EmbeddedThemeName::InspiredGithub);
-
-    let mut html_output = String::new();
-    let mut in_code_block = false;
-    let mut current_lang = String::new();
-
-    for event in parser {
-        match event {
-            Event::Start(Tag::CodeBlock(kind)) => {
-                in_code_block = true;
-                current_lang = match kind {
-                    CodeBlockKind::Fenced(lang) => lang.to_string(),
-                    CodeBlockKind::Indented => "plaintext".to_string(),
-                };
-                html_output.push_str(r#"<div class="code-highlight">"#);
-                html_output.push_str(r#"<div class="line-numbers">"#);
-                html_output.push_str("<pre><code>");
-            }
-            Event::End(TagEnd::CodeBlock) => {
-                in_code_block = false;
-                html_output.push_str("</code></pre>");
-                // Close the line numbers wrapper
-                html_output.push_str("</div>");
-                // Close the wrapper div
-                html_output.push_str("</div>");
-            }
-            Event::Text(text) => {
-                if in_code_block {
-                    // Syntax highlighting for code blocks
-                    let syntax = syntax_set
-                        .find_syntax_by_token(&current_lang)
-                        .unwrap_or_else(|| syntax_set.find_syntax_plain_text());
-                    let html =
-                        highlighted_html_for_string(&text, &syntax_set, syntax, theme).unwrap();
-                    let lines: Vec<&str> = html.lines().collect();
-                    let numbered_html = lines
-                        .iter()
-                        .enumerate()
-                        .map(|(i, line)| {
-                            // Skip line numbers for the first and last lines if they are empty
-                            if i == 0 || i == lines.len() - 1 {
-                                line.to_string()
-                            } else {
-                                format!("<span class=\"line-number\">{:<3}</span>{}", i, line)
-                            }
-                        })
-                        .collect::<Vec<String>>()
-                        .join("\n");
-                    html_output.push_str(&numbered_html);
-                } else {
-                    // Regular text
-                    html_output.push_str(&text);
-                }
-            }
-            _ => {
-                // Handle other Markdown events
-                html::push_html(&mut html_output, std::iter::once(event));
-            }
-        }
-    }
-
-    html_output
 }
 
 /// Reads a Markdown file, extracts the YAML front matter, and converts the Markdown to HTML.

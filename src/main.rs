@@ -8,6 +8,7 @@ mod map;
 mod projects;
 mod templates;
 mod util;
+mod markdown_parsing;
 
 use archive::archive;
 use clap::Parser;

@@ -198,9 +198,8 @@ pub struct LinkFile {
     pub links: Vec<Links>,
 }
 
-pub fn create_links(config: &ConfigFile) -> Vec<Links> {
-    let mut link_file = config
-        .content
+pub fn create_links(content_folder: &Path) -> Vec<Links> {
+    let mut link_file = content_folder
         .parent()
         .expect("Parent does not exist!")
         .join("links");
@@ -215,7 +214,7 @@ pub fn create_links(config: &ConfigFile) -> Vec<Links> {
 
 fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Environment) {
     let posts = create_posts(config);
-    let links = create_links(config);
+    let links = create_links(&config.content);
     let projects = create_projects(&config.projects);
 
     let card_post_template = env
@@ -322,7 +321,8 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     generate_rss(env, &posts, working_dir);
 }
 
-pub fn load_templates(config: &ConfigFile, env: &mut Environment) {
+pub fn load_templates(config: &ConfigFile) -> Environment {
+    let mut env = Environment::new();
     for entry in WalkDir::new(config.templates.clone())
         .into_iter()
         .filter_map(|e| e.ok())
@@ -341,13 +341,10 @@ pub fn load_templates(config: &ConfigFile, env: &mut Environment) {
                 .expect("Could not add template!");
         }
     }
+    env
 }
 
-pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
-    let mut env = Environment::new();
-    load_templates(&config, &mut env);
-    create_posts_and_projects(&config, working_dir, &env);
-
+fn write_landing(config: &ConfigFile, working_dir: &Path, env: &Environment<'_>) {
     let landing_page_loc = working_dir.join("index.html");
     let landing_page_markdown = config.root.join("content").join("landing.md");
     let content = markdown_to_html(&fs::read_to_string(landing_page_markdown).unwrap());
@@ -361,7 +358,9 @@ pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
             })
             .unwrap(),
     );
+}
 
+fn write_privacy_policy(working_dir: &Path, env: &Environment<'_>) {
     let privacy_file_loc = working_dir.join("privacy_policy.html");
     write_file(
         &privacy_file_loc,
@@ -370,4 +369,11 @@ pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
             .render(context! {})
             .unwrap(),
     )
+}
+
+pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
+    let env = load_templates(&config);
+    create_posts_and_projects(&config, working_dir, &env);
+    write_landing(&config, working_dir, &env);
+    write_privacy_policy(working_dir, &env);
 }

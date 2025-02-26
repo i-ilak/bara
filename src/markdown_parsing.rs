@@ -1,10 +1,10 @@
+use pulldown_cmark::html;
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, Options, Parser, Tag, TagEnd};
 use std::collections::HashMap;
 use std::fmt::Write;
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, Options, Parser, Tag, TagEnd};
 use syntect::highlighting::Theme;
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
-use pulldown_cmark::html;
 
 pub fn markdown_to_html(markdown: &str) -> String {
     let mut options = Options::empty();
@@ -28,15 +28,15 @@ pub fn markdown_to_html(markdown: &str) -> String {
 
     // Process events to handle footnotes and collect resulting events
     let events: Vec<Event> = filter_footnotes(parser, &mut context);
-    
+
     // Process main content
     process_main_content(events.into_iter(), &mut context);
-    
+
     // Process footnotes if any
     if !context.footnotes.is_empty() {
         process_footnotes(&mut context);
     }
-    
+
     context.html_output
 }
 
@@ -51,11 +51,7 @@ struct ParsingContext<'a> {
     theme: &'a Theme,
 }
 
-fn filter_footnotes<'a>(
-    parser: Parser<'a>,
-    context: &mut ParsingContext<'a>,
-) -> Vec<Event<'a>> {
-    // Collect the events into a Vec to avoid lifetime issues with the return type
+fn filter_footnotes<'a>(parser: Parser<'a>, context: &mut ParsingContext<'a>) -> Vec<Event<'a>> {
     parser.filter_map(|event| {
         match event {
             Event::Start(Tag::FootnoteDefinition(_)) => {
@@ -121,8 +117,12 @@ fn handle_code_block_start(kind: CodeBlockKind<'_>, context: &mut ParsingContext
         CodeBlockKind::Fenced(lang) => lang.to_string(),
         CodeBlockKind::Indented => "plaintext".to_string(),
     };
-    context.html_output.push_str(r#"<div class="code-highlight">"#);
-    context.html_output.push_str(r#"<div class="line-numbers">"#);
+    context
+        .html_output
+        .push_str(r#"<div class="code-highlight">"#);
+    context
+        .html_output
+        .push_str(r#"<div class="line-numbers">"#);
     context.html_output.push_str("<pre><code>");
 }
 
@@ -133,13 +133,15 @@ fn handle_code_block_end(context: &mut ParsingContext<'_>) {
 }
 
 fn handle_code_text(text: &str, context: &mut ParsingContext<'_>) {
-    let syntax = context.syntax_set
+    let syntax = context
+        .syntax_set
         .find_syntax_by_token(&context.current_lang)
         .unwrap_or_else(|| context.syntax_set.find_syntax_plain_text());
-    
-    let html = highlighted_html_for_string(text, context.syntax_set, syntax, context.theme).unwrap();
+
+    let html =
+        highlighted_html_for_string(text, context.syntax_set, syntax, context.theme).unwrap();
     let lines: Vec<&str> = html.lines().collect();
-    
+
     let numbered_html = lines
         .iter()
         .enumerate()
@@ -153,7 +155,7 @@ fn handle_code_text(text: &str, context: &mut ParsingContext<'_>) {
         })
         .collect::<Vec<String>>()
         .join("\n");
-        
+
     context.html_output.push_str(&numbered_html);
 }
 
@@ -165,7 +167,7 @@ fn process_footnotes(context: &mut ParsingContext<'_>) {
         }
         _ => false,
     });
-    
+
     // Sort footnotes by their number
     context.footnotes.sort_by_cached_key(|f| match f.first() {
         Some(Event::Start(Tag::FootnoteDefinition(name))) => {
@@ -175,25 +177,24 @@ fn process_footnotes(context: &mut ParsingContext<'_>) {
     });
 
     // Begin footnotes section
-    context.html_output.push_str("<hr><ol class=\"footnotes-list\">\n");
-    
+    context
+        .html_output
+        .push_str("<hr><ol class=\"footnotes-list\">\n");
+
     // Process each footnote
     let mut footnotes = std::mem::take(&mut context.footnotes);
     for footnote in footnotes.iter_mut() {
         process_single_footnote(footnote, context);
     }
-    
+
     context.html_output.push_str("</ol>");
 }
 
-fn process_single_footnote<'a>(
-    footnote: &mut Vec<Event<'a>>,
-    context: &mut ParsingContext<'a>,
-) {
+fn process_single_footnote<'a>(footnote: &mut Vec<Event<'a>>, context: &mut ParsingContext<'a>) {
     let mut name = CowStr::from("");
     let mut has_written_backrefs = false;
     let fl_len = footnote.len();
-    
+
     let events = std::mem::take(footnote);
     for (i, event) in events.into_iter().enumerate() {
         match event {
@@ -224,8 +225,14 @@ fn write_footnote_backreferences(name: &CowStr<'_>, context: &mut ParsingContext
                 r##" <a href="#fr-{}-{}">↩{}</a>"##,
                 name,
                 usage,
-                if usage > 1 { usage.to_string() } else { String::new() }
-            ).unwrap();
+                if usage > 1 {
+                    usage.to_string()
+                } else {
+                    String::new()
+                }
+            )
+            .unwrap();
         }
     }
 }
+

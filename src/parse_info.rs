@@ -1,9 +1,9 @@
-use temp_dir::TempDir;
 use crate::cli::Cli;
-use clap::Parser;
 use crate::config::ConfigFile;
+use clap::Parser;
 use serde_yaml;
 use std::fs;
+use temp_dir::TempDir;
 
 pub struct ParseInfo {
     pub args: Cli,
@@ -21,5 +21,9 @@ pub fn parse() -> ParseInfo {
     )
     .expect("Could not parse config file! Are you sure its valid yaml?");
 
-    ParseInfo{args, working_dir, config}
+    ParseInfo {
+        args,
+        working_dir,
+        config,
+    }
 }

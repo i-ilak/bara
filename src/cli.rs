@@ -12,4 +12,6 @@ pub struct Cli {
     pub archive: bool,
     #[clap(short, long)]
     pub config: String,
+    #[clap(short, long)]
+    pub watch: bool,
 }

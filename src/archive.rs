@@ -1,6 +1,7 @@
 use crate::config::ConfigFile;
-use crate::util::copy_dir_all;
+use crate::create::create;
 use crate::parse_info::ParseInfo;
+use crate::util::copy_dir_all;
 
 use semver::Version;
 use std::fs;
@@ -87,8 +88,9 @@ fn copy_files_to_archive(
 }
 
 pub fn archive(parsed_info: &ParseInfo) -> Result<(), Box<dyn std::error::Error>> {
+    create(parsed_info);
     let config = &parsed_info.config;
-    let working_dir= &parsed_info.working_dir.path();
+    let working_dir = &parsed_info.working_dir.path();
 
     // Get all existing versions
     let versions = get_all_versions(config).expect("Could not extract all the versions!");

@@ -1,7 +1,9 @@
+use crate::parse_info::ParseInfo;
 use regex::Regex;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 use walkdir::WalkDir;
 
 pub fn write_file(path: &Path, content: String) {
@@ -37,7 +39,7 @@ pub fn copy_dir_all(src: &Path, dst: &Path) {
     }
 }
 
-pub fn patch_basepath(working_dir: &Path) {
+fn patch_basepath(working_dir: &Path) {
     let re = Regex::new(r"time_machine/v\d+\.\d+\.\d+").expect("Invalid regex");
 
     for entry in WalkDir::new(working_dir).into_iter().filter_map(|e| e.ok()) {
@@ -62,4 +64,13 @@ pub fn patch_basepath(working_dir: &Path) {
             }
         }
     }
+}
+
+pub fn finalize(parsed_info: &ParseInfo) {
+    let config = &parsed_info.config;
+    let working_dir = &parsed_info.working_dir;
+
+    patch_basepath(working_dir.path());
+    let output_dir = PathBuf::from(&config.output);
+    copy_dir_all(working_dir.path(), &output_dir);
 }

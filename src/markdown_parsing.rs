@@ -235,4 +235,3 @@ fn write_footnote_backreferences(name: &CowStr<'_>, context: &mut ParsingContext
         }
     }
 }
-

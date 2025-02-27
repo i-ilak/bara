@@ -44,6 +44,8 @@
             cargo-deny
             cargo-edit
             cargo-watch
+            rustc
+            cargo
             rust-analyzer
             just
           ];

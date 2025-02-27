@@ -3,20 +3,8 @@ use crate::parse_info::ParseInfo;
 use std::sync::mpsc::channel;
 
 use notify::{
-    Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher,
+    Config, Event, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher,
 };
-
-fn handle_file_event(parsed_info: &ParseInfo, event: &Event) {
-    match event.kind {
-        EventKind::Create(_) => println!("Created:\t{:?}", event.paths),
-        EventKind::Modify(_) => println!("Modified:\t{:?}", event.paths),
-        EventKind::Remove(_) => println!("Removed:\t{:?}", event.paths),
-        EventKind::Access(_) => println!("Accessed:\t{:?}", event.paths),
-        EventKind::Other => println!("Other event:\t{:?}", event.paths),
-        _ => println!("Other event type: {:?}", event),
-    }
-    build(parsed_info);
-}
 
 pub fn watch(parsed_info: &ParseInfo) {
     let (tx, rx) = channel();
@@ -49,7 +37,7 @@ pub fn watch(parsed_info: &ParseInfo) {
         });
 
         if should_process {
-            handle_file_event(&parsed_info, &event);
+            build(parsed_info);
         }
     }
 }

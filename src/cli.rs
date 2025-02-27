@@ -11,7 +11,7 @@ pub struct Cli {
     #[clap(short, long)]
     pub archive: bool,
     #[clap(short, long)]
-    pub config: String,
+    pub config: Option<String>,
     #[clap(short, long)]
     pub watch: bool,
 }

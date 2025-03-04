@@ -14,6 +14,10 @@ pub fn create(parsed_info: &ParseInfo) {
 
         join!(jinja_handle, scss_handle);
     });
+    std::fs::copy(
+        &config.root.join("robots.txt"), 
+        working_dir.path().join("robots.txt"))
+        .expect("Could not copy robots.txt");
     copy_dir_all(&config.static_dir, &working_dir.path().join("static"));
     copy_dir_all(
         &config.time_machine,

@@ -1,13 +1,12 @@
 use crate::config::ConfigFile;
-use crate::content::{create_posts, Post};
+use crate::content::{create_posts, transform_tags, Post};
 use crate::markdown_parsing::markdown_to_html;
-use crate::projects::create_projects;
+use crate::projects::{create_projects};
 use crate::util::write_file;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use chrono_tz::Tz;
 use minijinja::{context, Environment, Template};
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs;
@@ -45,7 +44,7 @@ fn generate_rss(env: &Environment, posts: &[Post], working_dir: &Path) {
 
         // Get relative URL path
         let link = post
-            .serve_file_path
+            .link_file_path
             .as_ref()
             .and_then(|p| p.to_str())
             .unwrap_or("")
@@ -70,7 +69,7 @@ fn generate_rss(env: &Environment, posts: &[Post], working_dir: &Path) {
 
     // Render template
     let output = env
-        .get_template("rss_feed.jinja2")
+        .get_template("rss_feed.html.jinja2")
         .unwrap()
         .render(ctx)
         .unwrap();
@@ -177,6 +176,7 @@ pub struct Links {
     pub date_linked: NaiveDate,
     pub external_link: String,
     pub downloaded_link: String,
+    pub tags: Vec<String>,
 }
 
 impl Links {
@@ -189,6 +189,7 @@ impl Links {
             author => self.author,
             external_link => self.external_link,
             downloaded_link => self.downloaded_link,
+            tags => transform_tags(&self.tags),
         }
     }
 }
@@ -218,27 +219,32 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     let projects = create_projects(&config.projects);
 
     let card_post_template = env
-        .get_template("cards/post.jinja2")
+        .get_template("cards/post.html.jinja2")
         .expect("Template does not exist!");
 
     let card_links_template = env
-        .get_template("cards/link.jinja2")
+        .get_template("cards/link.html.jinja2")
         .expect("Template does not exist!");
 
     let card_project_template = env
-        .get_template("cards/project.jinja2")
+        .get_template("cards/project.html.jinja2")
         .expect("Template does not exist!");
 
     let post_template = env
-        .get_template("post.jinja2")
+        .get_template("post/post.html.jinja2")
         .expect("Template does not exist!");
 
     let post_and_project_overview_template = env
-        .get_template("post_overview.jinja2")
-        .expect("Could not load template: post_overview.jinja2");
+        .get_template("post_overview.html.jinja2")
+        .expect("Could not load template: post_overview.html.jinja2");
+
+    let sitemap_template = env
+        .get_template("sitemap.xml.jinja2")
+        .expect("Template does not exist!");
 
     let mut cards_posts_html: BTreeMap<&NaiveDate, String> = Default::default();
     let mut cards_projects_html: Vec<String> = Vec::with_capacity(projects.len());
+    let mut cards_links_html: Vec<String> = Vec::with_capacity(projects.len());
 
     // Process posts
     for post in posts.iter() {
@@ -288,8 +294,9 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
             working_dir.join(&link.downloaded_link[1..]),
         )
         .unwrap();
-        cards_posts_html.insert(&link.date_linked, card_html);
+        cards_links_html.push(card_html);
     }
+    cards_links_html.reverse();
 
     // Write post overview
     let posts_index_path = working_dir.join("posts/index.html");
@@ -299,8 +306,8 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
         &posts_index_path,
         post_and_project_overview_template
             .render(context! {
-                overview_title => "Posts",
                 posts => ordered_cards,
+                current_page => "posts"
             })
             .unwrap(),
     );
@@ -311,14 +318,75 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
         &projects_index_path,
         post_and_project_overview_template
             .render(context! {
-                overview_title => "Projects",
                 posts => cards_projects_html,
                 project => true,
+                current_page => "projects"
+            })
+            .unwrap(),
+    );
+    // Write project overview
+    let links_index_path = working_dir.join("links/index.html");
+    write_file(
+        &links_index_path,
+        post_and_project_overview_template
+            .render(context! {
+                posts => cards_links_html,
+                current_page => "links"
             })
             .unwrap(),
     );
 
     generate_rss(env, &posts, working_dir);
+
+    let sitemap = SiteMap::new(&posts);
+    write_file( 
+        working_dir.join("sitemap.xml").as_path(), 
+        sitemap_template.render(sitemap.jinja_context())
+            .expect("Error processing template for sitemap!"));
+    
+}
+
+#[derive(Serialize)]
+struct SiteMapEntry {
+    loc: PathBuf,
+    lastmod: NaiveDate,
+    #[serde(serialize_with = "serialize_two_decimals")]
+    priority: f32,
+}
+
+fn serialize_two_decimals<S>(value: &f32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let formatted = format!("{:.2}", value);
+    serializer.serialize_str(&formatted)
+}
+
+#[derive(Serialize)]
+struct SiteMap {
+    entries: Vec<SiteMapEntry>,
+}
+
+impl SiteMap {
+    fn new(posts: &Vec<Post>) -> SiteMap{
+        let mut entries :Vec<SiteMapEntry>= Vec::with_capacity(posts.len());
+
+        for post in posts.iter() {
+            entries.push(SiteMapEntry{
+                loc: post.serve_file_path.clone().unwrap(),
+                lastmod: post.taxonomies.date,
+                priority: 0.9
+            });
+        }
+
+        SiteMap{entries}
+    }
+
+    fn jinja_context(&self) -> minijinja::Value {
+        context! {
+            sitemap_entries => self.entries
+        }
+    }
 }
 
 pub fn load_templates(config: &ConfigFile) -> Environment {
@@ -350,7 +418,7 @@ fn write_landing(config: &ConfigFile, working_dir: &Path, env: &Environment<'_>)
     let content = markdown_to_html(&fs::read_to_string(landing_page_markdown).unwrap());
     write_file(
         &landing_page_loc,
-        env.get_template("landing.jinja2")
+        env.get_template("landing.html.jinja2")
             .expect("Cannot get landing page template!")
             .render(context! {
                 markdown => content,
@@ -364,8 +432,19 @@ fn write_privacy_policy(working_dir: &Path, env: &Environment<'_>) {
     let privacy_file_loc = working_dir.join("privacy_policy.html");
     write_file(
         &privacy_file_loc,
-        env.get_template("privacy_policy.jinja2")
+        env.get_template("privacy_policy.html.jinja2")
             .expect("Cannot create privacy policy!")
+            .render(context! {})
+            .unwrap(),
+    )
+}
+
+fn write_terms(working_dir: &Path, env: &Environment<'_>) {
+    let terms_file_loc = working_dir.join("terms.html");
+    write_file(
+        &terms_file_loc,
+        env.get_template("terms.html.jinja2")
+            .expect("Cannot create terms!")
             .render(context! {})
             .unwrap(),
     )
@@ -376,4 +455,5 @@ pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     create_posts_and_projects(&config, working_dir, &env);
     write_landing(&config, working_dir, &env);
     write_privacy_policy(working_dir, &env);
+    write_terms(working_dir, &env);
 }

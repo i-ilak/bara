@@ -39,6 +39,15 @@ pub struct Post {
     pub post_html: String,
     pub source_file_path: Option<PathBuf>,
     pub serve_file_path: Option<PathBuf>,
+    pub link_file_path: Option<PathBuf>,
+}
+
+pub fn transform_tags(tags: &Vec<String>) -> Vec<String> {
+    let mut tags_with_hash: Vec<String> = Vec::with_capacity(tags.len());
+    for tag in tags {
+        tags_with_hash.push(format!("#{}", tag));
+    }
+    tags_with_hash
 }
 
 impl Post {
@@ -46,13 +55,20 @@ impl Post {
         let (taxonomies, post_html) = parse_content(&path)
             .expect("Could not parse taxonomies and content. Double check markdown!");
 
-        let stripped_path = path.strip_prefix(root.join("content")).unwrap();
+            let stripped_path = path.strip_prefix(root.join("content")).unwrap();
+
+            let serve_path = stripped_path
+                .parent()
+                .unwrap()
+                .join(stripped_path.file_stem().unwrap())
+                .join("index.html");
 
         let post = Post {
             taxonomies,
             post_html,
             source_file_path: Some(path.to_path_buf()),
-            serve_file_path: Some(stripped_path.with_extension("html")),
+            serve_file_path: Some(serve_path.clone()),
+            link_file_path: Some(serve_path.parent().expect("X").to_path_buf()),
         };
 
         post
@@ -65,7 +81,7 @@ impl Post {
             "description": self.taxonomies.description,
         });
 
-        if let Some(serve_file_path) = &self.serve_file_path {
+        if let Some(serve_file_path) = &self.link_file_path {
             result["serve_file_path"] = serde_json::json!(serve_file_path);
         }
 
@@ -82,18 +98,20 @@ impl Post {
             None => {
                 context! {
                     post_description => self.taxonomies.description,
-                    post_link => self.serve_file_path,
+                    post_link => self.link_file_path,
                     post_title => self.taxonomies.title,
                     post_date => self.taxonomies.date,
+                    tags => transform_tags(&self.taxonomies.tags),
                 }
             }
             Some(value) => {
                 context! {
                     post_description => self.taxonomies.description,
-                    post_link => self.serve_file_path,
+                    post_link => self.link_file_path,
                     post_title => self.taxonomies.title,
                     post_date => self.taxonomies.date,
-                    extern_link => value.link
+                    extern_link => value.link,
+                    tags => transform_tags(&self.taxonomies.tags),
                 }
             }
         }

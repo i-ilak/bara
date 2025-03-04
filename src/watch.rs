@@ -38,6 +38,7 @@ pub fn watch(parsed_info: &ParseInfo) {
 
         if should_process {
             build(parsed_info);
+            println!("Rebuild triggered!");
         }
     }
 }

@@ -13,7 +13,7 @@ pub fn markdown_to_html(markdown: &str) -> String {
 
     let syntax_set = SyntaxSet::load_defaults_newlines();
     let theme_set = two_face::theme::extra();
-    let theme = theme_set.get(two_face::theme::EmbeddedThemeName::InspiredGithub);
+    let theme = theme_set.get(two_face::theme::EmbeddedThemeName::VisualStudioDarkPlus);
 
     let mut context = ParsingContext {
         footnotes: Vec::new(),

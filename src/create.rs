@@ -2,6 +2,7 @@ use crate::css::convert_scss_to_css;
 use crate::parse_info::ParseInfo;
 use crate::templates::process_jinja;
 use crate::util::copy_dir_all;
+use crate::typescript_transpile::transpile_typescript_files;
 
 use futures::join;
 
@@ -11,8 +12,11 @@ pub fn create(parsed_info: &ParseInfo) {
     futures::executor::block_on(async {
         let jinja_handle = process_jinja(&config, working_dir.path());
         let scss_handle = convert_scss_to_css(&config, working_dir.path());
+        let transpiler = transpile_typescript_files(
+            &config, 
+            &working_dir.path());
 
-        join!(jinja_handle, scss_handle);
+        join!(jinja_handle, scss_handle, transpiler);
     });
     std::fs::copy(
         &config.root.join("robots.txt"), 

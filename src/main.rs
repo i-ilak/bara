@@ -12,6 +12,7 @@ mod projects;
 mod templates;
 mod util;
 mod watch;
+mod typescript_transpile;
 
 use archive::archive;
 use build::build;

@@ -1,38 +1,22 @@
 use pulldown_cmark::html;
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{CowStr, Event, Options, Parser, Tag, TagEnd};
 use std::collections::HashMap;
 use std::fmt::Write;
-use syntect::highlighting::Theme;
-use syntect::html::highlighted_html_for_string;
-use syntect::parsing::SyntaxSet;
 
 pub fn markdown_to_html(markdown: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_FOOTNOTES);
     let parser = Parser::new_ext(markdown, options);
 
-    let syntax_set = SyntaxSet::load_defaults_newlines();
-    let theme_set = two_face::theme::extra();
-    let theme = theme_set.get(two_face::theme::EmbeddedThemeName::VisualStudioDarkPlus);
-
     let mut context = ParsingContext {
         footnotes: Vec::new(),
         in_footnote: Vec::new(),
         footnote_numbers: HashMap::new(),
         html_output: String::new(),
-        in_code_block: false,
-        current_lang: String::new(),
-        syntax_set: &syntax_set,
-        theme,
     };
-
-    // Process events to handle footnotes and collect resulting events
     let events: Vec<Event> = filter_footnotes(parser, &mut context);
 
-    // Process main content
     process_main_content(events.into_iter(), &mut context);
-
-    // Process footnotes if any
     if !context.footnotes.is_empty() {
         process_footnotes(&mut context);
     }
@@ -45,10 +29,6 @@ struct ParsingContext<'a> {
     in_footnote: Vec<Vec<Event<'a>>>,
     footnote_numbers: HashMap<CowStr<'a>, (usize, usize)>,
     html_output: String,
-    in_code_block: bool,
-    current_lang: String,
-    syntax_set: &'a SyntaxSet,
-    theme: &'a Theme,
 }
 
 fn filter_footnotes<'a>(parser: Parser<'a>, context: &mut ParsingContext<'a>) -> Vec<Event<'a>> {
@@ -90,18 +70,14 @@ fn process_main_content<'a>(
 ) {
     for event in events {
         match event {
-            Event::Start(Tag::CodeBlock(kind)) => {
-                handle_code_block_start(kind, context);
+            Event::Start(Tag::CodeBlock(_kind)) => {
+                handle_code_block_start(context);
             }
             Event::End(TagEnd::CodeBlock) => {
                 handle_code_block_end(context);
             }
             Event::Text(text) => {
-                if context.in_code_block {
-                    handle_code_text(&text, context);
-                } else {
-                    context.html_output.push_str(&html_escape::encode_text(&text));
-                }
+                context.html_output.push_str(&html_escape::encode_text(&text));
             }
             _ => {
                 html::push_html(&mut context.html_output, std::iter::once(event));
@@ -110,40 +86,12 @@ fn process_main_content<'a>(
     }
 }
 
-fn handle_code_block_start(kind: CodeBlockKind<'_>, context: &mut ParsingContext<'_>) {
+fn handle_code_block_start(context: &mut ParsingContext<'_>) {
     context.html_output.push_str("<pre><code>");
 }
 
 fn handle_code_block_end(context: &mut ParsingContext<'_>) {
     context.html_output.push_str("</code></pre>");
-}
-
-fn handle_code_text(text: &str, context: &mut ParsingContext<'_>) {
-    let escaped_text = html_escape::encode_text(text);
-    let syntax = context
-        .syntax_set
-        .find_syntax_by_token(&context.current_lang)
-        .unwrap_or_else(|| context.syntax_set.find_syntax_plain_text());
-
-    let html =
-        highlighted_html_for_string(&escaped_text, context.syntax_set, syntax, context.theme).unwrap();
-    let lines: Vec<&str> = html.lines().collect();
-
-    let numbered_html = lines
-        .iter()
-        .enumerate()
-        .map(|(i, line)| {
-            // Skip line numbers for the first and last lines if they are empty
-            if i == 0 || i == lines.len() - 1 {
-                line.to_string()
-            } else {
-                format!("<span class=\"line-number\">{:<3}</span>{}", i, line)
-            }
-        })
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    context.html_output.push_str(&numbered_html);
 }
 
 fn process_footnotes(context: &mut ParsingContext<'_>) {

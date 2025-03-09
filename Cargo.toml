@@ -16,7 +16,6 @@ serde_yaml = "0.9"
 serde_json = "1.0.138"
 regex = "1.7"
 pulldown-cmark = "0.13.0"
-syntect = {version="5.2.0" }
 reqwest = { version = "0.12.12", features = ["json", "blocking"] }
 walkdir = "2.5.0"
 semver = "1.0"
@@ -25,7 +24,6 @@ minijinja = { version="2.7.0", features=["loader"] }
 grass = "0.13.4"
 temp-dir = "0.1.14"
 versions = "6.3.2"
-two-face = { version = "0.4.3", features = ["syntect-default-onig"] }
 futures = "0.3.31"
 notify = "8.0.0"
 html-escape = "0.2.13"

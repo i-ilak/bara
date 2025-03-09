@@ -25,7 +25,7 @@ pub struct ExternInfo {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Taxonomies {
     pub title: String,
-    pub description: String,
+    pub description: Option<String>,
     pub date: NaiveDate,
     pub map: Option<MapData>,
     pub tags: Vec<String>,
@@ -68,7 +68,7 @@ impl Post {
             post_html,
             source_file_path: Some(path.to_path_buf()),
             serve_file_path: Some(serve_path.clone()),
-            link_file_path: Some(serve_path.parent().expect("X").to_path_buf()),
+            link_file_path: Some(Path::new("BASEPATH").join(serve_path.parent().expect("X").to_path_buf())),
         };
 
         post
@@ -94,22 +94,26 @@ impl Post {
 
     pub fn card_jinja_context(&self) -> minijinja::Value {
         let external = &self.taxonomies.extern_info;
+        let description = match &self.taxonomies.description {
+            Some(d) => d,
+            None => "",
+        };
         match external {
             None => {
                 context! {
-                    post_description => self.taxonomies.description,
-                    post_link => self.link_file_path,
-                    post_title => self.taxonomies.title,
-                    post_date => self.taxonomies.date,
+                    description => description,
+                    link => self.link_file_path,
+                    title => self.taxonomies.title,
+                    date => self.taxonomies.date,
                     tags => transform_tags(&self.taxonomies.tags),
                 }
             }
             Some(value) => {
                 context! {
-                    post_description => self.taxonomies.description,
-                    post_link => self.link_file_path,
-                    post_title => self.taxonomies.title,
-                    post_date => self.taxonomies.date,
+                    description => description,
+                    link => self.link_file_path,
+                    title => self.taxonomies.title,
+                    date => self.taxonomies.date,
                     extern_link => value.link,
                     tags => transform_tags(&self.taxonomies.tags),
                 }

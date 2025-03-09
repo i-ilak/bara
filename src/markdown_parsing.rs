@@ -100,8 +100,7 @@ fn process_main_content<'a>(
                 if context.in_code_block {
                     handle_code_text(&text, context);
                 } else {
-                    // Regular text
-                    context.html_output.push_str(&text);
+                    context.html_output.push_str(&html_escape::encode_text(&text));
                 }
             }
             _ => {
@@ -112,34 +111,22 @@ fn process_main_content<'a>(
 }
 
 fn handle_code_block_start(kind: CodeBlockKind<'_>, context: &mut ParsingContext<'_>) {
-    context.in_code_block = true;
-    context.current_lang = match kind {
-        CodeBlockKind::Fenced(lang) => lang.to_string(),
-        CodeBlockKind::Indented => "plaintext".to_string(),
-    };
-    context
-        .html_output
-        .push_str(r#"<div class="code-highlight">"#);
-    context
-        .html_output
-        .push_str(r#"<div class="line-numbers">"#);
     context.html_output.push_str("<pre><code>");
 }
 
 fn handle_code_block_end(context: &mut ParsingContext<'_>) {
-    context.in_code_block = false;
     context.html_output.push_str("</code></pre>");
-    context.html_output.push_str("</div></div>");
 }
 
 fn handle_code_text(text: &str, context: &mut ParsingContext<'_>) {
+    let escaped_text = html_escape::encode_text(text);
     let syntax = context
         .syntax_set
         .find_syntax_by_token(&context.current_lang)
         .unwrap_or_else(|| context.syntax_set.find_syntax_plain_text());
 
     let html =
-        highlighted_html_for_string(text, context.syntax_set, syntax, context.theme).unwrap();
+        highlighted_html_for_string(&escaped_text, context.syntax_set, syntax, context.theme).unwrap();
     let lines: Vec<&str> = html.lines().collect();
 
     let numbered_html = lines

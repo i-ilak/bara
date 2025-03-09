@@ -5,6 +5,23 @@ use crate::util::copy_dir_all;
 
 use futures::join;
 
+fn copy_highlight_related_code(parsed_info: &ParseInfo) {
+    let config = &parsed_info.config;
+    let working_dir = &parsed_info.working_dir;
+    copy_dir_all(
+        &config.root.join("scripts/highlightjs_styles"), 
+        &working_dir.path().join("scripts/highlightjs_styles"));
+    
+    std::fs::copy(
+        &config.root.join("scripts/highlight.min.js"), 
+        working_dir.path().join("scripts/highlight.min.js"))
+        .expect("Could not copy hightlight.min.js!");
+    std::fs::copy(
+        &config.root.join("scripts/highlightjs-line-numbers.js"), 
+        working_dir.path().join("scripts/highlightjs-line-numbers.js"))
+        .expect("Could not copy highlightjs-line-numbers.js!");
+}
+
 pub fn create(parsed_info: &ParseInfo) {
     let config = &parsed_info.config;
     let working_dir = &parsed_info.working_dir;
@@ -23,4 +40,5 @@ pub fn create(parsed_info: &ParseInfo) {
         &config.time_machine,
         &working_dir.path().join("time_machine"),
     );
+    copy_highlight_related_code(parsed_info);
 }

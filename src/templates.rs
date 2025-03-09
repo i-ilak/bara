@@ -1,7 +1,7 @@
 use crate::config::ConfigFile;
 use crate::content::{create_posts, transform_tags, Post};
 use crate::markdown_parsing::markdown_to_html;
-use crate::projects::{create_projects};
+use crate::projects::create_projects;
 use crate::util::write_file;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use chrono_tz::Tz;
@@ -53,7 +53,7 @@ fn generate_rss(env: &Environment, posts: &[Post], working_dir: &Path) {
         items.push(RssItem {
             title: post.taxonomies.title.clone(),
             link: format!("BASEPATH/{}", link.to_string()),
-            description: post.taxonomies.description.clone(),
+            description: post.taxonomies.description.clone().unwrap_or(String::new()),
             pub_date,
             tags: post.taxonomies.tags.clone(),
         });
@@ -187,7 +187,7 @@ impl Links {
             date_published => self.date_published,
             date_linked => self.date_linked,
             author => self.author,
-            external_link => self.external_link,
+            link => self.external_link,
             downloaded_link => self.downloaded_link,
             tags => transform_tags(&self.tags),
         }
@@ -218,16 +218,8 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     let links = create_links(&config.content);
     let projects = create_projects(&config.projects);
 
-    let card_post_template = env
-        .get_template("cards/post.html.jinja2")
-        .expect("Template does not exist!");
-
-    let card_links_template = env
-        .get_template("cards/link.html.jinja2")
-        .expect("Template does not exist!");
-
-    let card_project_template = env
-        .get_template("cards/project.html.jinja2")
+    let card_template = env
+        .get_template("card.html.jinja2")
         .expect("Template does not exist!");
 
     let post_template = env
@@ -250,7 +242,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     for post in posts.iter() {
         let file_path = working_dir.join(post.serve_file_path.clone().unwrap());
         let card_html = render_and_write(
-            &card_post_template,
+            &card_template,
             post,
             |p| p.card_jinja_context(),
             Some(&file_path),
@@ -271,7 +263,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     // Process projects
     for project in projects.iter() {
         let card_html = render_and_write(
-            &card_project_template,
+            &card_template,
             project,
             |p| p.card_jinja_context(),
             None,
@@ -283,7 +275,7 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     // Process links
     for link in links.iter() {
         let card_html =
-            render_and_write(&card_links_template, link, |p| p.card_jinja_context(), None).unwrap();
+            render_and_write(&card_template, link, |p| p.card_jinja_context(), None).unwrap();
         let link_folder = config.root.join("content");
 
         if !working_dir.join("links").exists() {

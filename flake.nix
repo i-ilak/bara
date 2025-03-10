@@ -1,10 +1,10 @@
 {
   inputs = {
-    flake-utils.url = "github:numtide/flake-utils";
-    naersk.url = "github:nix-community/naersk";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102.tar.gz";
+    naersk.url = "https://flakehub.com/f/nix-community/naersk/0.1.353.tar.gz";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.764837.tar.gz";
     rust-overlay = {
-      url = "github:oxalica/rust-overlay";
+      url = "https://flakehub.com/f/oxalica/rust-overlay/0.1.1715.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

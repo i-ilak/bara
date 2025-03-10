@@ -29,7 +29,7 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
 
   test:
-    needs: build-docker-image
+    needs: build-and-push
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}:latest

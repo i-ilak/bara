@@ -6,6 +6,6 @@ RUN nix-env -iA nixpkgs.git
 
 WORKDIR /app
 COPY flake.nix flake.lock ./
-RUN nix profile install .#devShell
+RUN nix build
 
 WORKDIR /workspace

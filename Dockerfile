@@ -6,6 +6,6 @@ RUN nix-env -iA nixpkgs.git
 
 WORKDIR /app
 COPY flake.nix flake.lock ./
-RUN nix build
+RUN nix build .#devShell.x86_64-linux
 
 WORKDIR /workspace

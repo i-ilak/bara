@@ -1,14 +1,23 @@
-name: Build
+name: CI
 
 on:
   push:
-    branches: [ trunk ]
+    branches: [trunk]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Build artifact
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix with flakes support
+        uses: DeterminateSystems/nix-installer-action@v4
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            system-features = nixos-test benchmark big-parallel recursive-nix
+
+      - name: Build
         run: |
-          cargo build --release
+          nix build

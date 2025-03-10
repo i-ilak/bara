@@ -1,26 +1,24 @@
 {
-  description = "A Nix-flake-based Rust development environment";
-
   inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*.tar.gz";
+    flake-utils.url = "github:numtide/flake-utils";
+    naersk.url = "github:nix-community/naersk";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, rust-overlay }:
+  outputs =
+    { self
+    , flake-utils
+    , naersk
+    , nixpkgs
+    , rust-overlay
+    }:
+    flake-utils.lib.eachDefaultSystem (system:
     let
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forEachSupportedSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: f {
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ rust-overlay.overlays.default self.overlays.default ];
-        };
-      });
-    in
-    {
-      overlays.default = final: prev: {
+      rustOverlay = final: prev: {
         rustToolchain =
           let
             rust = prev.rust-bin;
@@ -34,27 +32,37 @@
               extensions = [ "rust-src" "rustfmt" ];
             };
       };
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ rust-overlay.overlays.default rustOverlay ];
+      };
 
-      devShells = forEachSupportedSystem ({ pkgs }: {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            rustToolchain
-            openssl
-            pkg-config
-            cargo-deny
-            cargo-edit
-            cargo-watch
-            rustc
-            cargo
-            rust-analyzer
-            just
-          ];
+      naersk' = pkgs.callPackage naersk { };
 
-          env = {
-            # Required by rust-analyzer
-            RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
-          };
+    in
+    rec {
+      overlays.default = rustOverlay;
+
+      defaultPackage = naersk'.buildPackage {
+        src = ./.;
+      };
+
+      devShell = pkgs.mkShell {
+        nativeBuildInputs = with pkgs; [
+          rustToolchain
+          cargo
+          openssl
+          pkg-config
+          cargo-deny
+          cargo-edit
+          cargo-watch
+          rust-analyzer
+          just
+        ];
+        env = {
+          RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
         };
-      });
-    };
+      };
+    }
+    );
 }

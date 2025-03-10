@@ -58,6 +58,7 @@
           cargo-watch
           rust-analyzer
           just
+          nodejs_20
         ];
         env = {
           RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";

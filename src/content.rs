@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 use regex::Regex;
-use serde_yaml;
 use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,23 +51,23 @@ pub fn transform_tags(tags: &Vec<String>) -> Vec<String> {
 
 impl Post {
     pub fn new(path: &Path, root: &Path) -> Self {
-        let (taxonomies, post_html) = parse_content(&path)
+        let (taxonomies, post_html) = parse_content(path)
             .expect("Could not parse taxonomies and content. Double check markdown!");
 
-            let stripped_path = path.strip_prefix(root.join("content")).unwrap();
+        let stripped_path = path.strip_prefix(root.join("content")).unwrap();
 
-            let serve_path = stripped_path
-                .parent()
-                .unwrap()
-                .join(stripped_path.file_stem().unwrap())
-                .join("index.html");
+        let serve_path = stripped_path
+            .parent()
+            .unwrap()
+            .join(stripped_path.file_stem().unwrap())
+            .join("index.html");
 
         let post = Post {
             taxonomies,
             post_html,
             source_file_path: Some(path.to_path_buf()),
             serve_file_path: Some(serve_path.clone()),
-            link_file_path: Some(Path::new("BASEPATH").join(serve_path.parent().expect("X").to_path_buf())),
+            link_file_path: Some(Path::new("BASEPATH").join(serve_path.parent().expect("X"))),
         };
 
         post
@@ -175,7 +174,7 @@ pub fn parse_content(
     let file_text = fs::read_to_string(input_file)?;
 
     let re = Regex::new(r"---\s*")?;
-    let matches: Vec<&str> = re.split(&file_text.trim()).collect();
+    let matches: Vec<&str> = re.split(file_text.trim()).collect();
 
     let (taxonomies, after) = if matches.len() > 1 {
         let between = matches[1].trim();

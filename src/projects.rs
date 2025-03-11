@@ -26,7 +26,7 @@ pub struct Projects {
 }
 
 pub fn create_projects(projects_path: &Path) -> Vec<Project> {
-    let projects_str = fs::read_to_string(&projects_path).expect("Could not read file!");
+    let projects_str = fs::read_to_string(projects_path).expect("Could not read file!");
     let projects: Projects =
         serde_yaml::from_str(&projects_str).expect("Error parsing projects.yml!");
     projects.projects

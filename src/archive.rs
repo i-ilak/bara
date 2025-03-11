@@ -79,7 +79,7 @@ fn copy_files_to_archive(
         match fs::copy(&source_file, &dest_file) {
             Ok(_) => {}
             Err(_) => {
-                println!("{}", format!("File does not exist:\t{:?}", file))
+                println!("File does not exist:\t{:?}", file)
             }
         };
     }

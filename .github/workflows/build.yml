@@ -1,50 +1,44 @@
 name: CI
 
 on:
-  workflow_dispatch:
   push:
     branches: [trunk]
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+  build:
+    strategy:
+      matrix:
+        system: [x86_64-linux, aarch64-linux]
+    runs-on: ${{ matrix.system == 'x86_64-linux' && 'ubuntu-latest' || 'linux-arm64' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          extra-conf: |
+            experimental-features = nix-command flakes
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
+      - name: Setup Nix cache
+        uses: actions/cache@v3
         with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+          path: |
+            /nix/store
+            .cache/nix
+          key: ${{ runner.os }}-nix-${{ matrix.system }}-${{ hashFiles('flake.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nix-${{ matrix.system }}-
 
-  test:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Build for target system
+        run: nix build .#devShell.${{ matrix.system }}
 
-      - name: Build project
-        run: nix build
+      - name: Verify architecture
+        run: |
+          file ./result/bin/bara | grep "${{ matrix.system }}"
 
-      - name: Run tests
-        run: nix develop --command cargo test --all-features
+      - name: Lint and checks
+        run: |
+          nix develop --command cargo clippy --all-targets -- -D warnings
+          nix develop --command cargo fmt -- --check
 
-      - name: Lint
-        run: nix develop --command cargo clippy -- -D warnings

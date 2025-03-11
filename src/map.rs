@@ -1,4 +1,3 @@
-use reqwest;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::error::Error as StdError;
 
@@ -80,7 +79,7 @@ impl<'de> Deserialize<'de> for MapData {
         Ok(MapData {
             source_view: raw.source_view,
             size: raw.size,
-            waypoints: waypoints,
+            waypoints,
             route: Some(route),
         })
     }
@@ -93,7 +92,7 @@ impl<'de> Deserialize<'de> for MapData {
 ///
 /// # Returns
 /// A vector of route geometry coordinates as vectors of [longitude, latitude].
-pub fn fetch_route(waypoints: &Vec<Coordinate>) -> Result<Vec<Coordinate>, Box<dyn StdError>> {
+pub fn fetch_route(waypoints: &[Coordinate]) -> Result<Vec<Coordinate>, Box<dyn StdError>> {
     const OSMR_URL: &str = "https://router.project-osrm.org/route/v1/driving/";
 
     if waypoints.len() < 2 {

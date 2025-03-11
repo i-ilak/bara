@@ -2,9 +2,7 @@ use crate::build::build;
 use crate::parse_info::ParseInfo;
 use std::sync::mpsc::channel;
 
-use notify::{
-    Config, Event, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher,
-};
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher};
 
 pub fn watch(parsed_info: &ParseInfo) {
     let (tx, rx) = channel();

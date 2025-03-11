@@ -52,7 +52,7 @@ fn generate_rss(env: &Environment, posts: &[Post], working_dir: &Path) {
 
         items.push(RssItem {
             title: post.taxonomies.title.clone(),
-            link: format!("BASEPATH/{}", link.to_string()),
+            link: format!("BASEPATH/{}", link),
             description: post.taxonomies.description.clone().unwrap_or(String::new()),
             pub_date,
             tags: post.taxonomies.tags.clone(),
@@ -89,11 +89,11 @@ where
     T: ?Sized,
 {
     let rendered = template
-        .render(&context_fn(item))
+        .render(context_fn(item))
         .map_err(|e| format!("Could not render template: {}", e))?;
 
     if let Some(path) = output_path {
-        write_file(&path, rendered.clone());
+        write_file(path, rendered.clone());
     }
 
     Ok(rendered)
@@ -103,14 +103,12 @@ fn get_all_versions(time_machine_dir: &Path) -> Vec<Version> {
     let mut versions = Vec::new();
 
     if let Ok(entries) = fs::read_dir(time_machine_dir) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if path.is_dir() {
-                    if let Some(dir_name) = path.file_name() {
-                        if let Some(dir_name_str) = dir_name.to_str() {
-                            versions.push(Version::new(dir_name_str).unwrap());
-                        }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(dir_name) = path.file_name() {
+                    if let Some(dir_name_str) = dir_name.to_str() {
+                        versions.push(Version::new(dir_name_str).unwrap());
                     }
                 }
             }
@@ -140,7 +138,7 @@ fn create_database(posts: &Vec<Post>, working_dir: &Path, config: &ConfigFile) {
         database["posts"][post.uuid()] = post_entry;
 
         for tag in &post.taxonomies.tags {
-            if !database["tags"].get(tag).is_some() {
+            if database["tags"].get(tag).is_none() {
                 database["tags"][tag] = json!([]);
             }
             database["tags"][tag]
@@ -151,7 +149,7 @@ fn create_database(posts: &Vec<Post>, working_dir: &Path, config: &ConfigFile) {
     }
 
     // Add versions to the database
-    let versions: Vec<Value> = get_all_versions(&PathBuf::from(config.time_machine.clone()))
+    let versions: Vec<Value> = get_all_versions(&config.time_machine.clone())
         .iter()
         .rev()
         .map(|v| json!(format!("{}", v)))
@@ -258,17 +256,12 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
         )
         .unwrap();
     }
-    create_database(&posts, &working_dir, config);
+    create_database(&posts, working_dir, config);
 
     // Process projects
     for project in projects.iter() {
-        let card_html = render_and_write(
-            &card_template,
-            project,
-            |p| p.card_jinja_context(),
-            None,
-        )
-        .unwrap();
+        let card_html =
+            render_and_write(&card_template, project, |p| p.card_jinja_context(), None).unwrap();
         cards_projects_html.push(card_html);
     }
 
@@ -331,11 +324,12 @@ fn create_posts_and_projects(config: &ConfigFile, working_dir: &Path, env: &Envi
     generate_rss(env, &posts, working_dir);
 
     let sitemap = SiteMap::new(&posts);
-    write_file( 
-        working_dir.join("sitemap.xml").as_path(), 
-        sitemap_template.render(sitemap.jinja_context())
-            .expect("Error processing template for sitemap!"));
-    
+    write_file(
+        working_dir.join("sitemap.xml").as_path(),
+        sitemap_template
+            .render(sitemap.jinja_context())
+            .expect("Error processing template for sitemap!"),
+    );
 }
 
 #[derive(Serialize)]
@@ -360,18 +354,18 @@ struct SiteMap {
 }
 
 impl SiteMap {
-    fn new(posts: &Vec<Post>) -> SiteMap{
-        let mut entries :Vec<SiteMapEntry>= Vec::with_capacity(posts.len());
+    fn new(posts: &[Post]) -> SiteMap {
+        let mut entries: Vec<SiteMapEntry> = Vec::with_capacity(posts.len());
 
         for post in posts.iter() {
-            entries.push(SiteMapEntry{
+            entries.push(SiteMapEntry {
                 loc: post.serve_file_path.clone().unwrap(),
                 lastmod: post.taxonomies.date,
-                priority: 0.9
+                priority: 0.9,
             });
         }
 
-        SiteMap{entries}
+        SiteMap { entries }
     }
 
     fn jinja_context(&self) -> minijinja::Value {
@@ -443,9 +437,9 @@ fn write_terms(working_dir: &Path, env: &Environment<'_>) {
 }
 
 pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
-    let env = load_templates(&config);
-    create_posts_and_projects(&config, working_dir, &env);
-    write_landing(&config, working_dir, &env);
+    let env = load_templates(config);
+    create_posts_and_projects(config, working_dir, &env);
+    write_landing(config, working_dir, &env);
     write_privacy_policy(working_dir, &env);
     write_terms(working_dir, &env);
 }

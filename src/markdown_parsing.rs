@@ -77,7 +77,9 @@ fn process_main_content<'a>(
                 handle_code_block_end(context);
             }
             Event::Text(text) => {
-                context.html_output.push_str(&html_escape::encode_text(&text));
+                context
+                    .html_output
+                    .push_str(&html_escape::encode_text(&text));
             }
             _ => {
                 html::push_html(&mut context.html_output, std::iter::once(event));

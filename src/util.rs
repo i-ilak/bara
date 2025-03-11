@@ -23,7 +23,7 @@ fn replace_in_file(file_path: &Path, from: &str, to: &str) {
 
 pub fn copy_dir_all(src: &Path, dst: &Path) {
     if !dst.exists() {
-        fs::create_dir_all(dst).expect(&format!("Could not create folder:\t {:?}", dst));
+        fs::create_dir_all(dst).unwrap_or_else(|_| panic!("Could not create folder:\t {:?}", dst));
     }
 
     for entry in fs::read_dir(src).expect("Could not read source director!") {

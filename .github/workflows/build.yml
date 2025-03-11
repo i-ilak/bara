@@ -8,8 +8,8 @@ jobs:
   build:
     strategy:
       matrix:
-        system: [x86_64-linux, aarch64-linux]
-    runs-on: ${{ matrix.system == 'x86_64-linux' && 'ubuntu-latest' || 'linux-arm64' }}
+        system: [x86_64-linux, aarch64-darwin]
+    runs-on: ${{ matrix.system == 'x86_64-linux' && 'ubuntu-latest' || 'macos-arm64' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

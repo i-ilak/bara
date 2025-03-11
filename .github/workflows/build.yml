@@ -8,7 +8,7 @@ jobs:
   build:
     strategy:
       matrix:
-        system: [x86_64-linux, aarch64-darwin]
+        system: [x86_64-linux]
     runs-on: ${{ matrix.system == 'x86_64-linux' && 'ubuntu-latest' || 'macos-arm64' }}
     steps:
       - name: Checkout code
@@ -20,15 +20,8 @@ jobs:
           extra-conf: |
             experimental-features = nix-command flakes
 
-      - name: Setup Nix cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /nix/store
-            .cache/nix
-          key: ${{ runner.os }}-nix-${{ matrix.system }}-${{ hashFiles('flake.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-nix-${{ matrix.system }}-
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v2
 
       - name: Build for target system
         run: nix build .#devShell.${{ matrix.system }}

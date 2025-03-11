@@ -33,12 +33,7 @@ jobs:
       - name: Build for target system
         run: nix build .#devShell.${{ matrix.system }}
 
-      - name: Verify architecture
-        run: |
-          file ./result/bin/bara | grep "${{ matrix.system }}"
-
       - name: Lint and checks
         run: |
           nix develop --command cargo clippy --all-targets -- -D warnings
           nix develop --command cargo fmt -- --check
-

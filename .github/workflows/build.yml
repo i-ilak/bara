@@ -20,9 +20,6 @@ jobs:
           extra-conf: |
             experimental-features = nix-command flakes
 
-      - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v2
-
       - name: Build for target system
         run: nix build .#devShell.${{ matrix.system }}
 

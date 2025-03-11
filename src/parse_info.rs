@@ -14,7 +14,8 @@ pub struct ParseInfo {
 pub fn parse() -> ParseInfo {
     let args = Cli::parse();
 
-    let working_dir = TempDir::new().expect("Was not able to create temporary directory.");
+    let working_dir = TempDir::new()
+        .expect("Was not able to create temporary directory. Check for permissions or similar!");
 
     let config = match args.config {
         Some(ref path) => {

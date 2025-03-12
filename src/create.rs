@@ -9,8 +9,8 @@ fn copy_highlight_related_code(parsed_info: &ParseInfo) {
     let config = &parsed_info.config;
     let working_dir = &parsed_info.working_dir;
     copy_dir_all(
-        &config.root.join("scripts/highlightjs_styles"),
-        &working_dir.path().join("scripts/highlightjs_styles"),
+        &config.root.join("static/highlightjs_styles"),
+        &working_dir.path().join("static/highlightjs_styles"),
     );
 
     std::fs::copy(

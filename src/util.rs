@@ -27,7 +27,6 @@ pub fn copy_dir_all(src: &Path, dst: &Path) {
         fs::create_dir_all(dst).unwrap_or_else(|_| panic!("Could not create folder:\t {:?}", dst));
     }
 
-    println!("{:#?}\n{:#?}\n\n", src, dst);
     for entry in fs::read_dir(src).expect("Could not read source director!") {
         let entry = entry.expect("Problem parsing file!");
         let entry_path = entry.path();

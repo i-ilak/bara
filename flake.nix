@@ -44,6 +44,8 @@
       overlays.default = rustOverlay;
 
       defaultPackage = naersk'.buildPackage {
+        name = "bara";
+        version = "0.1.1";
         src = ./.;
       };
 

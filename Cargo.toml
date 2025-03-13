@@ -1,11 +1,11 @@
 [package]
 name = "bara"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
-# [profile.release]
-# strip = true
-# lto = true
+[profile.release]
+strip = true
+lto = true
 
 [dependencies]
 chrono = { version="0.4.39", features = ["serde"] }

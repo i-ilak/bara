@@ -1,6 +1,5 @@
 use crate::parse_info::ParseInfo;
 use regex::Regex;
-use std::backtrace::Backtrace;
 use std::fs;
 use std::io::Write;
 use std::path::Path;

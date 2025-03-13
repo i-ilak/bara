@@ -8,11 +8,13 @@ use futures::join;
 fn copy_highlight_related_code(parsed_info: &ParseInfo) {
     let config = &parsed_info.config;
     let working_dir = &parsed_info.working_dir;
+    std::fs::create_dir(working_dir.path().join("scripts"));
+    std::fs::create_dir(working_dir.path().join("scripts/highlightjs_styles"));
+
     copy_dir_all(
         &config.root.join("static/highlightjs_styles"),
         &working_dir.path().join("static/highlightjs_styles"),
     );
-    std::fs::create_dir(working_dir.path().join("scripts"));
     std::fs::copy(
         config.root.join("scripts/highlight.min.js"),
         working_dir.path().join("scripts/highlight.min.js"),

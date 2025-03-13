@@ -20,12 +20,28 @@ fn replace_in_file(file_path: &Path, from: &str, to: &str) {
     file.write_all(new_contents.as_bytes())
         .expect("Could not write data into file!");
 }
+fn print_folder_contents(path: &Path) {
+    if path.is_dir() {
+        match fs::read_dir(path) {
+            Ok(entries) => {
+                println!("Contents of {:?}:", path);
+                for entry in entries.flatten() {
+                    println!("\t{}", entry.path().display());
+                }
+            }
+            Err(e) => eprintln!("Failed to read directory: {}", e),
+        }
+    } else {
+        println!("{:?} is not a directory.", path);
+    }
+}
 
 pub fn copy_dir_all(src: &Path, dst: &Path) {
     if !dst.exists() {
         fs::create_dir_all(dst).unwrap_or_else(|_| panic!("Could not create folder:\t {:?}", dst));
     }
     println!("{}", src.display());
+    print_folder_contents(src);
     for entry in fs::read_dir(src).expect("Could not read source director!") {
         let entry = entry.expect("Problem parsing file!");
         let entry_path = entry.path();

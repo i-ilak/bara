@@ -3,7 +3,7 @@ use crate::config::ConfigFile;
 use clap::Parser;
 use std::env;
 use std::fs;
-use temp_dir::TempDir;
+use tempfile::TempDir;
 
 pub struct ParseInfo {
     pub args: Cli,
@@ -13,9 +13,6 @@ pub struct ParseInfo {
 
 pub fn parse() -> ParseInfo {
     let args = Cli::parse();
-
-    let working_dir = TempDir::new()
-        .expect("Was not able to create temporary directory. Check for permissions or similar!");
 
     let config = match args.config {
         Some(ref path) => {
@@ -31,9 +28,13 @@ pub fn parse() -> ParseInfo {
         ),
     };
 
+    let safe_config: ConfigFile = config.expect("Config file could not be parsed!");
+    let working_dir = TempDir::new_in(safe_config.clone().root)
+        .expect("Was not able to create temporary directory. Check for permissions or similar!");
+
     ParseInfo {
         args,
         working_dir,
-        config: config.expect("Reason"),
+        config: safe_config,
     }
 }

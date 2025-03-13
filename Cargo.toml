@@ -1,6 +1,6 @@
 [package]
 name = "bara"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 
 [profile.release]
@@ -26,7 +26,7 @@ semver = "1.0"
 clap = { version = "4.0", features = ["derive"] }
 minijinja = { version="2.7.0", features=["loader"] }
 grass = "0.13.4"
-temp-dir = "0.1.14"
+tempfile = "3.18.0"
 versions = "6.3.2"
 futures = "0.3.31"
 notify = "8.0.0"

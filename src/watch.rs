@@ -20,10 +20,18 @@ pub fn watch(parsed_info: &ParseInfo) {
     watcher
         .watch(&parsed_info.config.root, RecursiveMode::Recursive)
         .unwrap();
-    let output_dir = &parsed_info.config.root.join(&parsed_info.config.output);
+    let classic_output_dir = &parsed_info.config.root.join(&parsed_info.config.output);
+    let nix_output_dir = &parsed_info
+        .config
+        .root
+        .join("result")
+        .join(&parsed_info.config.output);
     for event in rx {
         let should_process = event.paths.iter().any(|path| {
-            if path.starts_with(output_dir) || path.ends_with("~") {
+            if path.starts_with(classic_output_dir)
+                || path.ends_with("~")
+                || path.starts_with(nix_output_dir)
+            {
                 return false;
             }
 

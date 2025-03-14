@@ -19,75 +19,60 @@
     flake-utils.lib.eachDefaultSystem (system:
     let
       rustOverlay = final: prev: {
-        rustToolchain =
-          let
-            rust = prev.rust-bin;
-          in
-          if builtins.pathExists ./rust-toolchain.toml then
-            rust.fromRustupToolchainFile ./rust-toolchain.toml
-          else if builtins.pathExists ./rust-toolchain then
-            rust.fromRustupToolchainFile ./rust-toolchain
-          else
-            rust.nightly.latest.default.override {
-              extensions = [ "rust-src" "rustfmt" ];
-            };
+        rustToolchain = prev.rust-bin.stable."1.85.0".default.override {
+          extensions = [ "rust-src" "rustfmt" ];
+          targets = [ ];
+        };
       };
 
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlays.default rustOverlay ];
+        overlays = [
+          rust-overlay.overlays.default
+          (final: prev: {
+            naersk = prev.callPackage naersk {
+              rustc = final.rustToolchain;
+              cargo = final.rustToolchain;
+            };
+          })
+          rustOverlay
+        ];
       };
 
       naersk' = pkgs.callPackage naersk { };
 
-      # Build the package
-      package = naersk'.buildPackage {
-        src = ./.;
-        # Remove the --bin bara option since it's not a named binary target
-        # Let naersk find the binary automatically
-      };
-
     in
     rec {
-      overlays.default = rustOverlay;
-
-      # Define packages in standard flake format
       packages = {
-        bara = package;
-        default = package;
-      };
-
-      # Define apps with a more flexible binary detection
-      apps = {
-        bara = {
-          type = "app";
-          # Try to find the binary by checking multiple possible locations
-          program =
-            let
-              binPath = "${package}/bin";
-            in
-            "${binPath}/bara";
+        bara = naersk'.buildPackage {
+          src = ./.;
+          preBuild = ''
+            cargo clean
+          '';
         };
-        default = apps.bara;
+        default = packages.bara;
       };
 
-      # Development shell remains the same
+      apps.default = {
+        type = "app";
+        program = "${packages.bara}/bin/bara";
+      };
+
       devShell = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
-          cargo
-          clippy
-          openssl
-          pkg-config
+          rustToolchain
           cargo-deny
           cargo-edit
           cargo-watch
-          rust-analyzer
+          openssl
+          pkg-config
           just
           nodejs_20
         ];
-        env = {
-          RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
-        };
+
+        RUSTUP_HOME = "/tmp/rustup";
+
+        RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
       };
     }
     );

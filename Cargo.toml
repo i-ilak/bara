@@ -1,7 +1,7 @@
 [package]
 name = "bara"
 version = "0.2.7"
-edition = "2025"
+edition = "2021"
 
 [profile.release]
 strip = true
@@ -24,7 +24,7 @@ reqwest = { version = "0.12.12", features = ["json", "blocking"] }
 walkdir = "2.5.0"
 semver = "1.0"
 clap = { version = "4.0", features = ["derive"] }
-minijinja = { version="2.7.0", features=["loader"] }
+minijinja = { version="2.8.0", features=["loader"] }
 grass = "0.13.4"
 tempfile = "3.18.0"
 versions = "6.3.2"

@@ -390,7 +390,6 @@ pub fn load_templates(config: &ConfigFile) -> Environment {
                 .expect("Could not strip the prefix!")
                 .to_string_lossy()
                 .into_owned();
-
             env.add_template_owned(template_name, template_source)
                 .expect("Could not add template!");
         }

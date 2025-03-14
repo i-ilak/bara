@@ -21,16 +21,11 @@ pub fn watch(parsed_info: &ParseInfo) {
         .watch(&parsed_info.config.root, RecursiveMode::Recursive)
         .unwrap();
     let classic_output_dir = &parsed_info.config.root.join(&parsed_info.config.output);
-    let nix_output_dir = &parsed_info
-        .config
-        .root
-        .join("result")
-        .join(&parsed_info.config.output);
     for event in rx {
         let should_process = event.paths.iter().any(|path| {
             if path.starts_with(classic_output_dir)
                 || path.ends_with("~")
-                || path.starts_with(nix_output_dir)
+                || path.to_string_lossy().contains(".tmp")
             {
                 return false;
             }

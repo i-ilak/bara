@@ -72,4 +72,5 @@ pub fn finalize(parsed_info: &ParseInfo) {
     patch_basepath(working_dir.path());
     let output_dir = PathBuf::from(&config.output);
     copy_dir_all(working_dir.path(), &output_dir);
+    let _ = std::fs::remove_dir_all(working_dir.path());
 }

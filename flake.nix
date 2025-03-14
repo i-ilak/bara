@@ -1,20 +1,41 @@
 {
   inputs = {
-  flake-utils.url = "github:numtide/flake-utils";
-  naersk.url = "github:nix-community/naersk";
-  nixpkgs.url = "github:NixOS/nixpkgs";
-};
+    flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.*.tar.gz";
+    naersk.url = "https://flakehub.com/f/nix-community/naersk/0.1.*.tar.gz";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*.tar.gz";
+    rust-overlay = {
+      url = "https://flakehub.com/f/oxalica/rust-overlay/0.1.*.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs =
     { self
     , flake-utils
     , naersk
     , nixpkgs
+    , rust-overlay
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
+      rustOverlay = final: prev: {
+        rustToolchain =
+          let
+            rust = prev.rust-bin;
+          in
+          if builtins.pathExists ./rust-toolchain.toml then
+            rust.fromRustupToolchainFile ./rust-toolchain.toml
+          else if builtins.pathExists ./rust-toolchain then
+            rust.fromRustupToolchainFile ./rust-toolchain
+          else
+            rust.nightly.latest.default.override {
+              extensions = [ "rust-src" "rustfmt" ];
+            };
+      };
+
       pkgs = import nixpkgs {
         inherit system;
+        overlays = [ rust-overlay.overlays.default rustOverlay ];
       };
 
       naersk' = pkgs.callPackage naersk { };
@@ -28,6 +49,8 @@
 
     in
     rec {
+      overlays.default = rustOverlay;
+
       # Define packages in standard flake format
       packages = {
         bara = package;
@@ -62,6 +85,9 @@
           just
           nodejs_20
         ];
+        env = {
+          RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
+        };
       };
     }
     );

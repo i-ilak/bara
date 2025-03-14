@@ -6,3 +6,5 @@
 .vscode/
 
 output/
+
+/.pre-commit-config.yaml

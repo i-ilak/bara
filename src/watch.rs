@@ -42,4 +42,3 @@ pub fn watch(parsed_info: &ParseInfo) {
         }
     }
 }
-

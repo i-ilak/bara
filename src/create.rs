@@ -3,13 +3,11 @@ use crate::parse_info::ParseInfo;
 use crate::templates::process_jinja;
 use crate::util::copy_dir_all;
 
-use futures::join;
-
 fn copy_highlight_related_code(parsed_info: &ParseInfo) {
     let config = &parsed_info.config;
     let working_dir = &parsed_info.working_dir;
-    std::fs::create_dir(working_dir.path().join("scripts"));
-    std::fs::create_dir(working_dir.path().join("scripts/highlightjs_styles"));
+    let _ = std::fs::create_dir(working_dir.path().join("scripts"));
+    let _ = std::fs::create_dir(working_dir.path().join("scripts/highlightjs_styles"));
 
     copy_dir_all(
         &config.root.join("static/highlightjs_styles"),
@@ -32,12 +30,8 @@ fn copy_highlight_related_code(parsed_info: &ParseInfo) {
 pub fn create(parsed_info: &ParseInfo) {
     let config = &parsed_info.config;
     let working_dir = &parsed_info.working_dir;
-    futures::executor::block_on(async {
-        let jinja_handle = process_jinja(config, working_dir.path());
-        let scss_handle = convert_scss_to_css(config, working_dir.path());
-
-        join!(jinja_handle, scss_handle);
-    });
+    process_jinja(config, working_dir.path());
+    convert_scss_to_css(config, working_dir.path());
     std::fs::copy(
         config.root.join("robots.txt"),
         working_dir.path().join("robots.txt"),

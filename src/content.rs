@@ -196,7 +196,7 @@ pub fn create_posts(config: &ConfigFile) -> Vec<Post> {
         .expect("Cannot read directory!")
         .collect();
 
-    let mut posts: Vec<Post> = Vec::with_capacity(entries.len() as usize);
+    let mut posts: Vec<Post> = Vec::with_capacity(entries.len());
     for file in entries {
         let entry = file.expect("Error when looking at file!");
         let path = entry.path();

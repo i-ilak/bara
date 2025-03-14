@@ -28,6 +28,5 @@ minijinja = { version="2.7.0", features=["loader"] }
 grass = "0.13.4"
 tempfile = "3.18.0"
 versions = "6.3.2"
-futures = "0.3.31"
 notify = "8.0.0"
 html-escape = "0.2.13"

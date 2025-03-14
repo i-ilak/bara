@@ -436,7 +436,7 @@ fn write_terms(working_dir: &Path, env: &Environment<'_>) {
     )
 }
 
-pub async fn process_jinja(config: &ConfigFile, working_dir: &Path) {
+pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     let env = load_templates(config);
     create_posts_and_projects(config, working_dir, &env);
     write_landing(config, working_dir, &env);

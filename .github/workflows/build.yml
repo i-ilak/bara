@@ -21,7 +21,6 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Build for target system
-        run: nix build
-
-      - name: Lint and checks
-        run: nix develop --command pre-commit run --all-files
+        run: |
+          nix build 
+          nix develop --command pre-commit run --all-files

@@ -35,6 +35,23 @@
         };
 
         naersk' = pkgs.callPackage naersk { };
+
+        preCommitCheck = pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          hooks = {
+            elm-format.enable = true;
+            clippy = {
+              enable = true;
+              package = pkgs.rustToolchain;
+              settings.allFeatures = true;
+            };
+          };
+          settings = {
+            rust.check.cargoDeps = pkgs.rustPlatform.importCargoLock {
+              lockFile = ./Cargo.lock;
+            };
+          };
+        };
       in
       rec {
         packages = {
@@ -67,19 +84,11 @@
             ];
             RUSTUP_HOME = "/tmp/rustup";
             RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
-          };
-        };
 
-        pre-commit-check = pre-commit-hooks.run {
-          src = ./.;
-          # If your hooks are intrusive, avoid running on each commit with a default_states like this:
-          # default_stages = ["manual" "pre-push"];
-          hooks = {
-            elm-format.enable = true;
-            clippy.enable = true;
-            clippy.settings.allFeatures = true;
+            pre-commit-hook = preCommitCheck.shellHook;
           };
         };
+        checks.pre-commit-check = preCommitCheck;
       }
     );
 }

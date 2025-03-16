@@ -10,36 +10,44 @@
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
   };
 
-  outputs = { self, flake-utils, naersk, nixpkgs, rust-overlay, pre-commit-hooks }:
+  outputs =
+    { self
+    , flake-utils
+    , naersk
+    , nixpkgs
+    , rust-overlay
+    , pre-commit-hooks
+    }:
     flake-utils.lib.eachDefaultSystem (system:
-      let
-        rustOverlay = final: prev: {
-          rustToolchain = prev.rust-bin.stable."1.85.0".default.override {
-            extensions = [ "rust-src" "rustfmt" ];
-            targets = [ ];
-          };
-        };
-
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [
-            rust-overlay.overlays.default
-            (final: prev: {
-              naersk = prev.callPackage naersk {
-                rustc = final.rustToolchain;
-                cargo = final.rustToolchain;
-              };
-            })
-            rustOverlay
+    let
+      rustOverlay = final: prev: {
+        rustToolchain = prev.rust-bin.stable."1.85.0".default.override {
+          extensions = [
+            "rust-src"
+            "rustfmt"
+            "clippy"
+            "rust-analyzer"
           ];
+          targets = [ ];
         };
+      };
 
-        naersk' = pkgs.callPackage naersk { };
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          rust-overlay.overlays.default
+          rustOverlay
+        ];
+      };
 
-        preCommitCheck = pre-commit-hooks.lib.${system}.run {
+      naerskLib = naersk.lib.${system};
+
+      preCommitCheck = pre-commit-hooks.lib.${system}.run
+        {
           src = ./.;
           hooks = {
             elm-format.enable = true;
+            nixpkgs-fmt.enable = true;
             clippy = {
               enable = true;
               package = pkgs.rustToolchain;
@@ -47,48 +55,69 @@
             };
           };
           settings = {
-            rust.check.cargoDeps = pkgs.rustPlatform.importCargoLock {
-              lockFile = ./Cargo.lock;
+            rust = {
+              check.cargoDeps = pkgs.rustPlatform.importCargoLock {
+                lockFile = ./Cargo.lock;
+              };
             };
           };
         };
-      in
-      rec {
-        packages = {
-          bara = naersk'.buildPackage {
-            src = ./.;
-            preBuild = ''
-              cargo clean
-            '';
-          };
-          default = packages.bara;
-        };
-
-        apps.default = {
-          type = "app";
-          program = "${packages.bara}/bin/bara";
-        };
-
-        devShells = {
-          default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs; [
-              rustToolchain
-              cargo-deny
-              cargo-edit
-              cargo-watch
-              openssl
-              pkg-config
-              just
-              nodejs_20
-              pre-commit-hooks.packages.${system}.default
-            ];
-            RUSTUP_HOME = "/tmp/rustup";
-            RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
-
-            pre-commit-hook = preCommitCheck.shellHook;
+    in
+    rec {
+      packages = {
+        bara = naerskLib.buildPackage {
+          pname = "bara";
+          src = ./.;
+          nativeBuildInputs = with pkgs; [ pkg-config ];
+          buildInputs = with pkgs; [ openssl ];
+          meta = with pkgs.lib; {
+            description = "Your project description";
+            homepage = "https://github.com/yourusername/bara";
+            license = licenses.mit;
+            maintainers = [ maintainers.yourusername ];
           };
         };
-        checks.pre-commit-check = preCommitCheck;
-      }
+        default = packages.bara;
+      };
+
+      apps.default = {
+        type = "app";
+        program = "${packages.bara}/bin/bara";
+      };
+
+      devShells = {
+        default = pkgs.mkShell {
+          nativeBuildInputs = with pkgs; [
+            rustToolchain
+            cargo-deny
+            cargo-edit
+            cargo-watch
+            cargo-audit
+            cargo-expand
+            cargo-udeps
+            cargo-nextest
+            openssl
+            pkg-config
+            just
+            nodejs_20
+            pre-commit-hooks.packages.${system}.default
+          ];
+          RUSTUP_HOME = "/tmp/rustup";
+          RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
+          shellHook = ''
+            ${preCommitCheck.shellHook}
+          '';
+        };
+
+        release = pkgs.mkShell {
+          nativeBuildInputs = devShells.default.nativeBuildInputs ++ [
+            pkgs.cargo-release
+          ];
+          shellHook = devShells.default.shellHook;
+        };
+      };
+
+      checks.pre-commit-check = preCommitCheck;
+    }
     );
 }

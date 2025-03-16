@@ -384,6 +384,9 @@ pub fn load_templates(config: &ConfigFile) -> Environment {
         let path = entry.path();
 
         if path.extension().and_then(|ext| ext.to_str()) == Some("jinja2") {
+            if path.to_str().unwrap().contains("privacy_policy") {
+                continue;
+            }
             let template_source = fs::read_to_string(path).expect("Cannot read template!");
             let template_name = path
                 .strip_prefix(&config.templates)
@@ -439,6 +442,6 @@ pub fn process_jinja(config: &ConfigFile, working_dir: &Path) {
     let env = load_templates(config);
     create_posts_and_projects(config, working_dir, &env);
     write_landing(config, working_dir, &env);
-    write_privacy_policy(working_dir, &env);
+    //write_privacy_policy(working_dir, &env);
     write_terms(working_dir, &env);
 }

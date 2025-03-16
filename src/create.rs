@@ -11,6 +11,8 @@ fn copy_highlight_related_code(parsed_info: &ParseInfo) {
         &config.root.join("static/highlightjs_styles"),
         &working_dir.path().join("static/highlightjs_styles"),
     );
+    let scripts_dir_path = working_dir.path().join("scripts");
+    let _ = std::fs::create_dir_all(scripts_dir_path);
     std::fs::copy(
         config.root.join("scripts/highlight.min.js"),
         working_dir.path().join("scripts/highlight.min.js"),

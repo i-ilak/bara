@@ -146,6 +146,11 @@ fn process_single_footnote<'a>(footnote: &mut Vec<Event<'a>>, context: &mut Pars
                 has_written_backrefs = true;
                 context.html_output.push_str("</li>\n");
             }
+            Event::End(TagEnd::FootnoteDefinition) => {
+                if !has_written_backrefs {
+                    context.html_output.push_str("</li>\n");
+                }
+            }
             e => html::push_html(&mut context.html_output, std::iter::once(e)),
         }
     }

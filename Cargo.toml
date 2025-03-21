@@ -1,32 +1,33 @@
-[package]
-name = "bara"
-version = "0.2.13"
-edition = "2021"
-
-[profile.release]
-strip = true
-lto = true
-
 [[bin]]
 name = "bara"
 path = "src/main.rs"
 
 [dependencies]
-chrono = { version="0.4.39", features = ["serde"] }
+chrono = {version = "0.4.39", features = ["serde"]}
 chrono-tz = "0.10.1"
-uuid = { version = "1.13.1", features = ["v5"] }
-serde = { version = "1.0", features = ["derive"] }
+uuid = {version = "1.13.1", features = ["v5"]}
+serde = {version = "1.0", features = ["derive"]}
 serde_yaml = "0.9"
 serde_json = "1.0.138"
 regex = "1.7"
 pulldown-cmark = "0.13.0"
-reqwest = { version = "0.12.12", features = ["json", "blocking"] }
+reqwest = {version = "0.12.12", features = ["json", "blocking"]}
 walkdir = "2.5.0"
 semver = "1.0"
-clap = { version = "4.0", features = ["derive"] }
-minijinja = { version="2.8.0", features=["loader"] }
+clap = {version = "4.0", features = ["derive"]}
+minijinja = {version = "2.8.0", features = ["loader"]}
 grass = "0.13.4"
 tempfile = "3.18.0"
 versions = "6.3.2"
 notify = "8.0.0"
 html-escape = "0.2.13"
+thiserror = "2.0.12"
+
+[package]
+name = "bara"
+version = "0.2.14"
+edition = "2021"
+
+[profile.release]
+strip = true
+lto = true

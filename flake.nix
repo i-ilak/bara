@@ -3,6 +3,7 @@
     flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.*.tar.gz";
     naersk.url = "https://flakehub.com/f/nix-community/naersk/0.1.*.tar.gz";
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*.tar.gz";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
     rust-overlay = {
       url = "https://flakehub.com/f/oxalica/rust-overlay/0.1.*.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -15,6 +16,7 @@
     , flake-utils
     , naersk
     , nixpkgs
+    , treefmt-nix
     , rust-overlay
     , pre-commit-hooks
     }:
@@ -62,6 +64,7 @@
             };
           };
         };
+      treefmtEval.${pkgs.system} = treefmt-nix.lib.evalModule pkgs ./nix/treefmt.nix;
     in
     rec {
       packages = {
@@ -117,6 +120,7 @@
         };
       };
 
+      formatter = treefmtEval.${pkgs.system}.config.build.wrapper;
       checks.pre-commit-check = preCommitCheck;
     }
     );

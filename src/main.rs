@@ -5,6 +5,7 @@ mod config;
 mod content;
 mod create;
 mod css;
+mod errors;
 mod map;
 mod markdown_parsing;
 mod parse_info;
